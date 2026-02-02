@@ -1,166 +1,179 @@
 """
-Document parsing utilities for PDF and DOCX files.
-Extracts text, structure, and metadata from legal documents.
+Document parser for Vietnamese legal documents.
+Supports PDF and DOCX formats with hierarchical structure extraction.
 """
 
-import os
+import re
 import logging
 from typing import List, Dict, Any, Optional
+from dataclasses import dataclass
 from pathlib import Path
-from datetime import datetime
 
+from docx import Document
 import fitz  # PyMuPDF
-from docx import Document as DocxDocument
-from unstructured.partition.pdf import partition_pdf
-from unstructured.partition.docx import partition_docx
-from unstructured.documents.elements import (
-    Element,
-    Title,
-    NarrativeText,
-    ListItem,
-    Table,
-)
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class DocumentElement:
-    """Represents a parsed document element with hierarchy."""
+    """
+    Represents a hierarchical element in the document
+    """
+    element_type: str  # title, section, article, paragraph, etc.
+    text: str
+    level: int  # Hierarchy level (0=root, 1=chapter, 2=section, etc.)
+    page_number: Optional[int] = None
+    metadata: Optional[Dict[str, Any]] = None
 
-    def __init__(
-        self,
-        element_type: str,
-        text: str,
-        page_number: Optional[int] = None,
-        hierarchy_level: int = 0,
-        metadata: Optional[Dict[str, Any]] = None,
-    ):
-        self.element_type = element_type
-        self.text = text
-        self.page_number = page_number
-        self.hierarchy_level = hierarchy_level
-        self.metadata = metadata or {}
+    def __post_init__(self):
+        if self.metadata is None:
+            self.metadata = {}
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "element_type": self.element_type,
-            "text": self.text,
-            "page_number": self.page_number,
-            "hierarchy_level": self.hierarchy_level,
-            "metadata": self.metadata,
+
+class PDFParser:
+    """
+    Parser for PDF documents using PyMuPDF
+    """
+
+    def __init__(self):
+        self.legal_patterns = {
+            "law": re.compile(r"^(LUẬT|Luật)\s+[A-ZĐ\s]+", re.IGNORECASE),
+            "decree": re.compile(r"^(NGHỊ ĐỊNH|Nghị định)\s+\d+\/\d+\/[A-Z\-]+", re.IGNORECASE),
+            "circular": re.compile(r"^(THÔNG TƯ|Thông tư)\s+\d+\/\d+\/[A-Z\-]+", re.IGNORECASE),
+            "chapter": re.compile(r"^Chương\s+[IVXLCDM\d]+", re.IGNORECASE),
+            "section": re.compile(r"^Mục\s+\d+", re.IGNORECASE),
+            "article": re.compile(r"^Điều\s+\d+", re.IGNORECASE),
+            "clause": re.compile(r"^\d+\.\s+", re.IGNORECASE),
         }
 
-    def __repr__(self) -> str:
-        return f"DocumentElement(type={self.element_type}, page={self.page_number}, level={self.hierarchy_level})"
-
-
-class DocumentParser:
-    """Base document parser with common functionality."""
-
-    def __init__(self, file_path: str):
-        self.file_path = file_path
-        self.file_ext = Path(file_path).suffix.lower()
-        self.elements: List[DocumentElement] = []
-        self.metadata: Dict[str, Any] = {}
-
-    def parse(self) -> List[DocumentElement]:
-        """Parse document and return structured elements."""
-        raise NotImplementedError("Subclasses must implement parse()")
-
-    def extract_metadata(self) -> Dict[str, Any]:
-        """Extract document metadata."""
-        return {
-            "filename": Path(self.file_path).name,
-            "file_size": os.path.getsize(self.file_path),
-            "file_type": self.file_ext,
-        }
-
-
-class PDFParser(DocumentParser):
-    """PDF parser using PyMuPDF and Unstructured."""
-
-    def __init__(self, file_path: str, use_ocr: bool = False):
-        super().__init__(file_path)
-        self.use_ocr = use_ocr
-
-    def parse(self) -> List[DocumentElement]:
+    def parse(self, file_path: str) -> tuple[List[DocumentElement], Dict[str, Any]]:
         """
-        Parse PDF using Unstructured for structure detection.
-        Falls back to PyMuPDF for simple text extraction if Unstructured fails.
-        """
-        logger.info(f"Parsing PDF: {self.file_path}")
+        Parse PDF document
 
+        Args:
+            file_path: Path to PDF file
+
+        Returns:
+            Tuple of (elements list, metadata dict)
+        """
         try:
-            # Try Unstructured first for better structure detection
-            elements = partition_pdf(
-                filename=self.file_path,
-                strategy="hi_res" if self.use_ocr else "fast",
-                include_page_breaks=True,
-                languages=["vie", "eng"],  # Vietnamese and English
-            )
+            elements = []
+            metadata = {}
 
-            self.elements = self._convert_unstructured_elements(elements)
-            logger.info(f"Extracted {len(self.elements)} elements using Unstructured")
+            # Use PyMuPDF for basic extraction
+            pdf_doc = fitz.open(file_path)
+            metadata["page_count"] = pdf_doc.page_count
+
+            for page_num in range(pdf_doc.page_count):
+                page = pdf_doc[page_num]
+                text = page.get_text()
+
+                # Split into blocks
+                blocks = text.split("\n\n")
+
+                for block in blocks:
+                    if not block.strip():
+                        continue
+
+                    element = self._classify_element(block.strip(), page_num + 1)
+                    if element:
+                        elements.append(element)
+
+            pdf_doc.close()
+
+            # Extract document title from first elements
+            if elements:
+                metadata["title"] = elements[0].text[:200]
+
+            logger.info(f"Parsed PDF: {len(elements)} elements, {metadata['page_count']} pages")
+            return elements, metadata
 
         except Exception as e:
-            logger.warning(f"Unstructured parsing failed: {e}. Falling back to PyMuPDF")
-            self.elements = self._parse_with_pymupdf()
+            logger.error(f"PDF parsing error: {e}")
+            raise
 
-        self.metadata = self._extract_pdf_metadata()
-        return self.elements
+    def _classify_element(self, text: str, page_number: int) -> Optional[DocumentElement]:
+        """
+        Classify text element by type and level
 
-    def _convert_unstructured_elements(self, elements: List[Element]) -> List[DocumentElement]:
-        """Convert Unstructured elements to DocumentElement objects."""
-        parsed_elements = []
-        current_page = 1
+        Args:
+            text: Element text
+            page_number: Page number
 
-        for elem in elements:
-            # Determine hierarchy level based on element type
-            if isinstance(elem, Title):
-                hierarchy_level = self._infer_title_level(elem.text)
-                element_type = f"title_level_{hierarchy_level}"
-            elif isinstance(elem, ListItem):
-                element_type = "list_item"
-                hierarchy_level = 3
-            elif isinstance(elem, Table):
-                element_type = "table"
-                hierarchy_level = 2
-            else:
-                element_type = "text"
-                hierarchy_level = 4
+        Returns:
+            DocumentElement or None
+        """
+        text = text.strip()
+        if not text or len(text) < 3:
+            return None
 
-            # Get page number from metadata
-            page_number = getattr(elem.metadata, "page_number", current_page)
-            if page_number:
-                current_page = page_number
-
-            parsed_elem = DocumentElement(
-                element_type=element_type,
-                text=elem.text,
-                page_number=page_number,
-                hierarchy_level=hierarchy_level,
-                metadata={
-                    "coordinates": getattr(elem.metadata, "coordinates", None),
-                    "file_directory": getattr(elem.metadata, "file_directory", None),
-                },
+        # Check patterns
+        if self.legal_patterns["law"].match(text):
+            return DocumentElement(
+                element_type="title",
+                text=text,
+                level=0,
+                page_number=page_number
             )
-            parsed_elements.append(parsed_elem)
-
-        return parsed_elements
+        elif self.legal_patterns["decree"].match(text) or self.legal_patterns["circular"].match(text):
+            return DocumentElement(
+                element_type="title",
+                text=text,
+                level=1,
+                page_number=page_number
+            )
+        elif self.legal_patterns["chapter"].match(text):
+            return DocumentElement(
+                element_type="chapter",
+                text=text,
+                level=2,
+                page_number=page_number
+            )
+        elif self.legal_patterns["section"].match(text):
+            return DocumentElement(
+                element_type="section",
+                text=text,
+                level=3,
+                page_number=page_number
+            )
+        elif self.legal_patterns["article"].match(text):
+            return DocumentElement(
+                element_type="article",
+                text=text,
+                level=4,
+                page_number=page_number
+            )
+        elif self.legal_patterns["clause"].match(text):
+            return DocumentElement(
+                element_type="clause",
+                text=text,
+                level=5,
+                page_number=page_number
+            )
+        else:
+            # Default to paragraph
+            level = self._infer_title_level(text)
+            return DocumentElement(
+                element_type="paragraph",
+                text=text,
+                level=level,
+                page_number=page_number
+            )
 
     def _infer_title_level(self, text: str) -> int:
         """
-        Infer hierarchy level for Vietnamese legal document titles.
-        Level 1: Document title
-        Level 2: Chapters (Chương)
-        Level 3: Sections (Mục)
-        Level 4: Articles (Điều)
-        Level 5: Clauses (Khoản)
+        Infer title level from text characteristics
+
+        Args:
+            text: Element text
+
+        Returns:
+            Level (1-5)
         """
         text_lower = text.lower().strip()
 
-        # Vietnamese legal structure patterns
+        # Check for common legal document keywords
         if any(keyword in text_lower for keyword in ["luật", "nghị định", "thông tư", "quyết định"]):
             return 1
         elif text_lower.startswith("chương"):
@@ -169,227 +182,96 @@ class PDFParser(DocumentParser):
             return 3
         elif text_lower.startswith("điều"):
             return 4
-        elif any(text_lower.startswith(str(i) + ".") for i in range(1, 100)):
-            return 5
         else:
-            return 3  # Default to section level
+            return 3  # Default level
 
-    def _parse_with_pymupdf(self) -> List[DocumentElement]:
-        """Fallback parser using PyMuPDF for simple text extraction."""
-        elements = []
 
-        with fitz.open(self.file_path) as doc:
-            for page_num, page in enumerate(doc, start=1):
-                text = page.get_text()
+class DOCXParser:
+    """
+    Parser for DOCX documents using python-docx
+    """
 
-                # Split by paragraphs
-                paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    def __init__(self):
+        self.pdf_parser = PDFParser()
 
-                for para in paragraphs:
-                    # Simple heuristic for structure
-                    if self._is_title(para):
-                        hierarchy_level = self._infer_title_level(para)
-                        element_type = f"title_level_{hierarchy_level}"
-                    else:
-                        hierarchy_level = 4
-                        element_type = "text"
+    def parse(self, file_path: str) -> tuple[List[DocumentElement], Dict[str, Any]]:
+        """
+        Parse DOCX document
 
-                    elem = DocumentElement(
-                        element_type=element_type,
-                        text=para,
-                        page_number=page_num,
-                        hierarchy_level=hierarchy_level,
-                    )
-                    elements.append(elem)
+        Args:
+            file_path: Path to DOCX file
 
-        return elements
-
-    def _is_title(self, text: str) -> bool:
-        """Heuristic to detect if text is a title/heading."""
-        text_lower = text.lower().strip()
-        return (
-            len(text) < 200
-            and (
-                text_lower.startswith(("chương", "mục", "điều", "luật", "nghị định"))
-                or text.isupper()
-            )
-        )
-
-    def _extract_pdf_metadata(self) -> Dict[str, Any]:
-        """Extract metadata from PDF."""
-        metadata = self.extract_metadata()
-
+        Returns:
+            Tuple of (elements list, metadata dict)
+        """
         try:
-            with fitz.open(self.file_path) as doc:
-                metadata.update({
-                    "page_count": len(doc),
-                    "title": doc.metadata.get("title", ""),
-                    "author": doc.metadata.get("author", ""),
-                    "subject": doc.metadata.get("subject", ""),
-                    "creation_date": doc.metadata.get("creationDate", ""),
-                    "modification_date": doc.metadata.get("modDate", ""),
-                })
-        except Exception as e:
-            logger.error(f"Failed to extract PDF metadata: {e}")
+            elements = []
+            metadata = {}
 
-        return metadata
+            doc = Document(file_path)
 
+            # Extract paragraphs
+            for para in doc.paragraphs:
+                text = para.text.strip()
+                if not text:
+                    continue
 
-class DOCXParser(DocumentParser):
-    """DOCX parser using python-docx and Unstructured."""
+                # Use same classification as PDF parser
+                element = self.pdf_parser._classify_element(text, 0)
+                if element:
+                    elements.append(element)
 
-    def parse(self) -> List[DocumentElement]:
-        """Parse DOCX file and extract structured elements."""
-        logger.info(f"Parsing DOCX: {self.file_path}")
+            # Extract tables
+            for table in doc.tables:
+                table_text = self._extract_table_text(table)
+                if table_text:
+                    elements.append(DocumentElement(
+                        element_type="table",
+                        text=table_text,
+                        level=5,
+                        page_number=0
+                    ))
 
-        try:
-            # Try Unstructured first
-            elements = partition_docx(filename=self.file_path)
-            self.elements = self._convert_unstructured_elements(elements)
-            logger.info(f"Extracted {len(self.elements)} elements using Unstructured")
+            metadata["paragraph_count"] = len(doc.paragraphs)
+            metadata["table_count"] = len(doc.tables)
+
+            if elements:
+                metadata["title"] = elements[0].text[:200]
+
+            logger.info(f"Parsed DOCX: {len(elements)} elements")
+            return elements, metadata
 
         except Exception as e:
-            logger.warning(f"Unstructured parsing failed: {e}. Falling back to python-docx")
-            self.elements = self._parse_with_docx()
-
-        self.metadata = self._extract_docx_metadata()
-        return self.elements
-
-    def _convert_unstructured_elements(self, elements: List[Element]) -> List[DocumentElement]:
-        """Convert Unstructured elements to DocumentElement objects."""
-        parsed_elements = []
-
-        for elem in elements:
-            if isinstance(elem, Title):
-                hierarchy_level = self._infer_title_level(elem.text)
-                element_type = f"title_level_{hierarchy_level}"
-            elif isinstance(elem, ListItem):
-                element_type = "list_item"
-                hierarchy_level = 3
-            elif isinstance(elem, Table):
-                element_type = "table"
-                hierarchy_level = 2
-            else:
-                element_type = "text"
-                hierarchy_level = 4
-
-            parsed_elem = DocumentElement(
-                element_type=element_type,
-                text=elem.text,
-                page_number=None,  # DOCX doesn't have page numbers reliably
-                hierarchy_level=hierarchy_level,
-            )
-            parsed_elements.append(parsed_elem)
-
-        return parsed_elements
-
-    def _infer_title_level(self, text: str) -> int:
-        """Infer hierarchy level for Vietnamese legal document titles."""
-        text_lower = text.lower().strip()
-
-        if any(keyword in text_lower for keyword in ["luật", "nghị định", "thông tư"]):
-            return 1
-        elif text_lower.startswith("chương"):
-            return 2
-        elif text_lower.startswith("mục"):
-            return 3
-        elif text_lower.startswith("điều"):
-            return 4
-        else:
-            return 3
-
-    def _parse_with_docx(self) -> List[DocumentElement]:
-        """Fallback parser using python-docx."""
-        elements = []
-        doc = DocxDocument(self.file_path)
-
-        for para in doc.paragraphs:
-            text = para.text.strip()
-            if not text:
-                continue
-
-            # Detect hierarchy from style or content
-            style_name = para.style.name.lower()
-
-            if "heading" in style_name or "title" in style_name:
-                hierarchy_level = self._infer_title_level(text)
-                element_type = f"title_level_{hierarchy_level}"
-            else:
-                hierarchy_level = 4
-                element_type = "text"
-
-            elem = DocumentElement(
-                element_type=element_type,
-                text=text,
-                page_number=None,
-                hierarchy_level=hierarchy_level,
-            )
-            elements.append(elem)
-
-        # Parse tables
-        for table in doc.tables:
-            table_text = self._extract_table_text(table)
-            elem = DocumentElement(
-                element_type="table",
-                text=table_text,
-                page_number=None,
-                hierarchy_level=2,
-            )
-            elements.append(elem)
-
-        return elements
+            logger.error(f"DOCX parsing error: {e}")
+            raise
 
     def _extract_table_text(self, table) -> str:
-        """Extract text from DOCX table."""
+        """Extract text from table"""
         rows = []
         for row in table.rows:
             cells = [cell.text.strip() for cell in row.cells]
             rows.append(" | ".join(cells))
         return "\n".join(rows)
 
-    def _extract_docx_metadata(self) -> Dict[str, Any]:
-        """Extract metadata from DOCX."""
-        metadata = self.extract_metadata()
 
-        try:
-            doc = DocxDocument(self.file_path)
-            core_props = doc.core_properties
-
-            metadata.update({
-                "page_count": len(doc.paragraphs),  # Approximation
-                "title": core_props.title or "",
-                "author": core_props.author or "",
-                "subject": core_props.subject or "",
-                "creation_date": core_props.created.isoformat() if core_props.created else "",
-                "modification_date": core_props.modified.isoformat() if core_props.modified else "",
-            })
-        except Exception as e:
-            logger.error(f"Failed to extract DOCX metadata: {e}")
-
-        return metadata
-
-
-def parse_document(file_path: str, use_ocr: bool = False) -> tuple[List[DocumentElement], Dict[str, Any]]:
+def parse_document(file_path: str) -> tuple[List[DocumentElement], Dict[str, Any]]:
     """
-    Factory function to parse a document based on file extension.
+    Parse document (PDF or DOCX)
 
     Args:
-        file_path: Path to the document file
-        use_ocr: Whether to use OCR for PDFs (slower but better for scanned docs)
+        file_path: Path to document file
 
     Returns:
-        Tuple of (elements, metadata)
+        Tuple of (elements list, metadata dict)
     """
-    file_ext = Path(file_path).suffix.lower()
+    path = Path(file_path)
+    suffix = path.suffix.lower()
 
-    if file_ext == ".pdf":
-        parser = PDFParser(file_path, use_ocr=use_ocr)
-    elif file_ext in [".docx", ".doc"]:
-        parser = DOCXParser(file_path)
+    if suffix == ".pdf":
+        parser = PDFParser()
+    elif suffix in [".docx", ".doc"]:
+        parser = DOCXParser()
     else:
-        raise ValueError(f"Unsupported file type: {file_ext}")
+        raise ValueError(f"Unsupported file type: {suffix}")
 
-    elements = parser.parse()
-    metadata = parser.metadata
-
-    return elements, metadata
+    return parser.parse(file_path)

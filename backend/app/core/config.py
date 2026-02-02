@@ -29,8 +29,15 @@ class Settings(BaseSettings):
 
     # LLM
     OLLAMA_URL: str
-    OLLAMA_MODEL: str = "vistral:7b-chat-q4_K_M"
-    OLLAMA_TIMEOUT: int = 120
+    OLLAMA_BASE_URL: Optional[str] = None
+    OLLAMA_MODEL: str = "qwen2.5:7b"
+    OLLAMA_TIMEOUT: int = 300
+
+    @field_validator("OLLAMA_BASE_URL")
+    @classmethod
+    def set_ollama_base_url(cls, v: Optional[str], info) -> str:
+        """Set OLLAMA_BASE_URL from OLLAMA_URL if not provided"""
+        return v or info.data.get("OLLAMA_URL", "http://ollama:11434")
 
     # Embeddings
     EMBEDDING_MODEL: str = "intfloat/multilingual-e5-large"

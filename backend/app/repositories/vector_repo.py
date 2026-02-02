@@ -16,7 +16,6 @@ from qdrant_client.models import (
     FieldCondition,
     MatchValue,
     SearchRequest,
-    Prefetch,
 )
 from qdrant_client.http import models
 import numpy as np

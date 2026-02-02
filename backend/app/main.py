@@ -1,7 +1,7 @@
 """
 Main FastAPI application
 """
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, WebSocket, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
@@ -113,6 +113,24 @@ async def internal_error_handler(request, exc):
 # Include API routers
 from app.api.v1.router import api_router
 app.include_router(api_router, prefix="/api/v1")
+
+
+# WebSocket endpoint for chat streaming
+from app.api.websockets.chat_ws import handle_chat_websocket
+
+
+@app.websocket("/ws/chat")
+async def websocket_chat_endpoint(
+    websocket: WebSocket,
+    token: str = Query(...)
+):
+    """
+    WebSocket endpoint for real-time chat streaming
+
+    Query params:
+        token: JWT access token for authentication
+    """
+    await handle_chat_websocket(websocket, token)
 
 
 if __name__ == "__main__":
