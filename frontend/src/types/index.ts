@@ -43,13 +43,34 @@ export interface DocumentListResponse {
   limit: number
 }
 
+export interface Source {
+  document_id: number
+  document_title: string
+  section_title?: string
+  article_number?: string
+  page_number?: number
+  relevance_score: number
+  chunk_id?: string
+  content?: string
+}
+
+export interface RetrievedChunk {
+  chunk_id: string
+  content: string
+  score: number
+  document_id: number
+  document_title: string
+  page_number?: number
+  hierarchy_path?: string
+}
+
 export interface Message {
   id: number
   conversation_id: number
   role: 'user' | 'assistant' | 'system'
   content: string
-  sources?: any
-  retrieved_chunks?: any[]
+  sources?: Source[]
+  retrieved_chunks?: RetrievedChunk[]
   retrieval_score?: number
   processing_time?: number
   tokens_used?: number
@@ -78,5 +99,109 @@ export interface ChatRequest {
 export interface ChatResponse {
   message: Message
   conversation_id: number
-  sources?: any[]
+  sources?: Source[]
+}
+
+// WebSocket Types
+export type WSMessageType = 'metadata' | 'text' | 'done' | 'error' | 'pong' | 'chat' | 'ping'
+
+export interface WSChatRequest {
+  type: 'chat'
+  message: string
+  conversation_id?: number
+  temperature?: number
+  max_tokens?: number
+}
+
+export interface WSMetadataMessage {
+  type: 'metadata'
+  sources: Source[]
+  retrieved_count: number
+  retrieval_time: number
+  conversation_id: number
+}
+
+export interface WSTextMessage {
+  type: 'text'
+  content: string
+}
+
+export interface WSDoneMessage {
+  type: 'done'
+  message_id: number
+  generation_time: number
+  total_time: number
+  tokens_used: number
+}
+
+export interface WSErrorMessage {
+  type: 'error'
+  message: string
+}
+
+export type WSMessage = WSMetadataMessage | WSTextMessage | WSDoneMessage | WSErrorMessage
+
+// Streaming State
+export type StreamingState = 'idle' | 'connecting' | 'streaming' | 'done' | 'error'
+export type ConnectionStatus = 'connected' | 'disconnected' | 'reconnecting'
+
+// Chat Store State
+export interface ChatState {
+  // Conversations
+  conversations: Conversation[]
+  currentConversationId: number | null
+
+  // Messages
+  messages: Message[]
+  streamingMessage: string
+  streamingMetadata: WSMetadataMessage | null
+
+  // State
+  streamingState: StreamingState
+  connectionStatus: ConnectionStatus
+  error: string | null
+
+  // Actions
+  setConversations: (conversations: Conversation[]) => void
+  setCurrentConversation: (id: number | null) => void
+  addConversation: (conversation: Conversation) => void
+  updateConversation: (id: number, updates: Partial<Conversation>) => void
+  deleteConversation: (id: number) => void
+
+  setMessages: (messages: Message[]) => void
+  addMessage: (message: Message) => void
+  appendToStreamingMessage: (text: string) => void
+  setStreamingMetadata: (metadata: WSMetadataMessage | null) => void
+  finalizeStreamingMessage: (message: Message) => void
+  clearStreamingMessage: () => void
+
+  setStreamingState: (state: StreamingState) => void
+  setConnectionStatus: (status: ConnectionStatus) => void
+  setError: (error: string | null) => void
+
+  reset: () => void
+}
+
+// Conversation List Response
+export interface ConversationListResponse {
+  conversations: Conversation[]
+  total: number
+  skip: number
+  limit: number
+}
+
+// Conversation Create/Update
+export interface ConversationCreate {
+  title: string
+}
+
+export interface ConversationUpdate {
+  title?: string
+  is_archived?: boolean
+}
+
+// Message Feedback
+export interface MessageFeedback {
+  rating: number // 1-5
+  comment?: string
 }
