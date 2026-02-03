@@ -111,7 +111,7 @@ export const QueryPerformanceChart = ({ data }: QueryPerformanceChartProps) => {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {feedbackData.map((entry, index) => (
+                  {feedbackData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

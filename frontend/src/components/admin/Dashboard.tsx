@@ -1,15 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import {
-  Users,
-  FileText,
-  MessageSquare,
-  Activity,
-  Clock,
-  TrendingUp,
-  Database,
-  Zap,
-} from 'lucide-react'
+import { Users, FileText, MessageSquare, Activity } from 'lucide-react'
 import { adminService } from '@/services/admin'
 import { StatsCard } from './StatsCard'
 import { DocumentAnalyticsChart } from './DocumentAnalyticsChart'

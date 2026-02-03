@@ -3,7 +3,6 @@ import { Plus, MessageSquare, Trash2, Archive } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { chatService } from '@/services/chat'
 import { useChatStore } from '@/stores/chatStore'
-import type { Conversation } from '@/types'
 
 export const ConversationList = () => {
   const queryClient = useQueryClient()

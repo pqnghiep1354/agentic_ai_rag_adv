@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Wifi, WifiOff, RefreshCw, AlertCircle } from 'lucide-react'
 import { useChat } from '@/hooks/useChat'
 import { useChatStore } from '@/stores/chatStore'
@@ -11,7 +10,6 @@ export const ChatInterface = () => {
   const {
     messages,
     streamingMessage,
-    streamingState,
     connectionStatus,
     error,
     isConnected,

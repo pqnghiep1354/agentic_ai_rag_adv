@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from app.core.config import settings
+
 # Import Base and models
 from app.core.database import Base
 from app.models.domain import Conversation, Document, Message, User  # noqa
