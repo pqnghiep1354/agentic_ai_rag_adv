@@ -7,7 +7,7 @@ import { DocumentUpload } from '../components/documents/DocumentUpload';
 import { DocumentList } from '../components/documents/DocumentList';
 import { FileText } from 'lucide-react';
 
-export const Documents: React.FC = () => {
+const Documents: React.FC = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleUploadComplete = () => {
@@ -52,3 +52,5 @@ export const Documents: React.FC = () => {
     </div>
   );
 };
+
+export default Documents;
