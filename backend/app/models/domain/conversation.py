@@ -1,9 +1,13 @@
 """
 Conversation and Message domain models
 """
+
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Float, JSON
+
+from sqlalchemy import (JSON, Boolean, Column, DateTime, Float, ForeignKey,
+                        Integer, String, Text)
 from sqlalchemy.orm import relationship
+
 from ...core.database import Base
 
 
@@ -11,14 +15,19 @@ class Conversation(Base):
     """
     Conversation model for chat history
     """
+
     __tablename__ = "conversations"
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     is_archived = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
     last_message_at = Column(DateTime)
 
     # Relationships
@@ -27,7 +36,7 @@ class Conversation(Base):
         "Message",
         back_populates="conversation",
         cascade="all, delete-orphan",
-        order_by="Message.created_at"
+        order_by="Message.created_at",
     )
 
     @property
@@ -40,6 +49,7 @@ class Message(Base):
     """
     Message model for individual messages in conversations
     """
+
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -47,7 +57,7 @@ class Message(Base):
         Integer,
         ForeignKey("conversations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
     role = Column(String(20), nullable=False)  # 'user', 'assistant', 'system'
     content = Column(Text, nullable=False)

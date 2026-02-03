@@ -1,17 +1,18 @@
 """
 Dependency injection for FastAPI endpoints
 """
+
 from typing import AsyncGenerator, Optional
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
-from redis.asyncio import Redis
-from qdrant_client import AsyncQdrantClient
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from neo4j import AsyncGraphDatabase
+from qdrant_client import AsyncQdrantClient
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import settings
 from .security import decode_token
-
 
 # Security
 security = HTTPBearer()
@@ -64,8 +65,7 @@ async def get_neo4j():
         Neo4j driver instance
     """
     driver = AsyncGraphDatabase.driver(
-        settings.NEO4J_URI,
-        auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
+        settings.NEO4J_URI, auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
     )
     try:
         yield driver
@@ -113,7 +113,9 @@ async def get_current_user(
 
 # Optional current user (for endpoints that work with or without auth)
 async def get_current_user_optional(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
+        HTTPBearer(auto_error=False)
+    ),
 ) -> Optional[dict]:
     """
     Get current user if authenticated, None otherwise

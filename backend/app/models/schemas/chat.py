@@ -1,25 +1,30 @@
 """
 Pydantic schemas for chat and conversations
 """
+
 from datetime import datetime
-from typing import List, Optional, Any, Dict
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
 # Message schemas
 class MessageBase(BaseModel):
     """Base message schema"""
+
     role: str = Field(..., description="Message role: user, assistant, system")
     content: str = Field(..., description="Message content")
 
 
 class MessageCreate(MessageBase):
     """Schema for creating a message"""
+
     conversation_id: Optional[int] = Field(None, description="Conversation ID")
 
 
 class MessageResponse(MessageBase):
     """Schema for message response"""
+
     id: int
     conversation_id: int
     sources: Optional[List[Dict[str, Any]]] = None
@@ -36,6 +41,7 @@ class MessageResponse(MessageBase):
 
 class MessageFeedback(BaseModel):
     """Schema for message feedback"""
+
     rating: int = Field(..., ge=1, le=5, description="Rating from 1 to 5")
     comment: Optional[str] = Field(None, description="Feedback comment")
 
@@ -43,22 +49,26 @@ class MessageFeedback(BaseModel):
 # Conversation schemas
 class ConversationBase(BaseModel):
     """Base conversation schema"""
+
     title: str = Field(..., max_length=255, description="Conversation title")
 
 
 class ConversationCreate(ConversationBase):
     """Schema for creating a conversation"""
+
     pass
 
 
 class ConversationUpdate(BaseModel):
     """Schema for updating a conversation"""
+
     title: Optional[str] = Field(None, max_length=255, description="New title")
     is_archived: Optional[bool] = Field(None, description="Archive status")
 
 
 class ConversationResponse(ConversationBase):
     """Schema for conversation response"""
+
     id: int
     user_id: int
     is_archived: bool
@@ -73,6 +83,7 @@ class ConversationResponse(ConversationBase):
 
 class ConversationListResponse(BaseModel):
     """Schema for conversation list response"""
+
     conversations: List[ConversationResponse]
     total: int
     skip: int
@@ -82,15 +93,21 @@ class ConversationListResponse(BaseModel):
 # Chat request/response schemas
 class ChatRequest(BaseModel):
     """Schema for chat request"""
+
     message: str = Field(..., min_length=1, description="User message")
     conversation_id: Optional[int] = Field(None, description="Existing conversation ID")
     stream: bool = Field(default=False, description="Enable streaming")
-    temperature: float = Field(default=0.7, ge=0.0, le=1.0, description="LLM temperature")
-    max_tokens: int = Field(default=2048, ge=100, le=4096, description="Max tokens to generate")
+    temperature: float = Field(
+        default=0.7, ge=0.0, le=1.0, description="LLM temperature"
+    )
+    max_tokens: int = Field(
+        default=2048, ge=100, le=4096, description="Max tokens to generate"
+    )
 
 
 class ChatResponse(BaseModel):
     """Schema for chat response"""
+
     message: MessageResponse
     conversation_id: int
     sources: Optional[List[Dict[str, Any]]] = None
@@ -99,6 +116,7 @@ class ChatResponse(BaseModel):
 # Source schema
 class Source(BaseModel):
     """Schema for retrieved source"""
+
     document_id: int
     document_title: str
     section_title: Optional[str] = None
@@ -110,6 +128,7 @@ class Source(BaseModel):
 # WebSocket message types
 class WSMessageType:
     """WebSocket message types"""
+
     METADATA = "metadata"
     TEXT = "text"
     DONE = "done"
@@ -118,6 +137,7 @@ class WSMessageType:
 
 class WSMessage(BaseModel):
     """WebSocket message schema"""
+
     type: str
     content: Optional[str] = None
     sources: Optional[List[Dict[str, Any]]] = None

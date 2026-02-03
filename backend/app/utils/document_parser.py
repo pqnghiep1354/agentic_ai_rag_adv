@@ -3,14 +3,14 @@ Document parser for Vietnamese legal documents.
 Supports PDF and DOCX formats with hierarchical structure extraction.
 """
 
-import re
 import logging
-from typing import List, Dict, Any, Optional
+import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from docx import Document
 import fitz  # PyMuPDF
+from docx import Document
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,7 @@ class DocumentElement:
     """
     Represents a hierarchical element in the document
     """
+
     element_type: str  # title, section, article, paragraph, etc.
     text: str
     level: int  # Hierarchy level (0=root, 1=chapter, 2=section, etc.)
@@ -39,8 +40,12 @@ class PDFParser:
     def __init__(self):
         self.legal_patterns = {
             "law": re.compile(r"^(LUẬT|Luật)\s+[A-ZĐ\s]+", re.IGNORECASE),
-            "decree": re.compile(r"^(NGHỊ ĐỊNH|Nghị định)\s+\d+\/\d+\/[A-Z\-]+", re.IGNORECASE),
-            "circular": re.compile(r"^(THÔNG TƯ|Thông tư)\s+\d+\/\d+\/[A-Z\-]+", re.IGNORECASE),
+            "decree": re.compile(
+                r"^(NGHỊ ĐỊNH|Nghị định)\s+\d+\/\d+\/[A-Z\-]+", re.IGNORECASE
+            ),
+            "circular": re.compile(
+                r"^(THÔNG TƯ|Thông tư)\s+\d+\/\d+\/[A-Z\-]+", re.IGNORECASE
+            ),
             "chapter": re.compile(r"^Chương\s+[IVXLCDM\d]+", re.IGNORECASE),
             "section": re.compile(r"^Mục\s+\d+", re.IGNORECASE),
             "article": re.compile(r"^Điều\s+\d+", re.IGNORECASE),
@@ -86,14 +91,18 @@ class PDFParser:
             if elements:
                 metadata["title"] = elements[0].text[:200]
 
-            logger.info(f"Parsed PDF: {len(elements)} elements, {metadata['page_count']} pages")
+            logger.info(
+                f"Parsed PDF: {len(elements)} elements, {metadata['page_count']} pages"
+            )
             return elements, metadata
 
         except Exception as e:
             logger.error(f"PDF parsing error: {e}")
             raise
 
-    def _classify_element(self, text: str, page_number: int) -> Optional[DocumentElement]:
+    def _classify_element(
+        self, text: str, page_number: int
+    ) -> Optional[DocumentElement]:
         """
         Classify text element by type and level
 
@@ -111,45 +120,29 @@ class PDFParser:
         # Check patterns
         if self.legal_patterns["law"].match(text):
             return DocumentElement(
-                element_type="title",
-                text=text,
-                level=0,
-                page_number=page_number
+                element_type="title", text=text, level=0, page_number=page_number
             )
-        elif self.legal_patterns["decree"].match(text) or self.legal_patterns["circular"].match(text):
+        elif self.legal_patterns["decree"].match(text) or self.legal_patterns[
+            "circular"
+        ].match(text):
             return DocumentElement(
-                element_type="title",
-                text=text,
-                level=1,
-                page_number=page_number
+                element_type="title", text=text, level=1, page_number=page_number
             )
         elif self.legal_patterns["chapter"].match(text):
             return DocumentElement(
-                element_type="chapter",
-                text=text,
-                level=2,
-                page_number=page_number
+                element_type="chapter", text=text, level=2, page_number=page_number
             )
         elif self.legal_patterns["section"].match(text):
             return DocumentElement(
-                element_type="section",
-                text=text,
-                level=3,
-                page_number=page_number
+                element_type="section", text=text, level=3, page_number=page_number
             )
         elif self.legal_patterns["article"].match(text):
             return DocumentElement(
-                element_type="article",
-                text=text,
-                level=4,
-                page_number=page_number
+                element_type="article", text=text, level=4, page_number=page_number
             )
         elif self.legal_patterns["clause"].match(text):
             return DocumentElement(
-                element_type="clause",
-                text=text,
-                level=5,
-                page_number=page_number
+                element_type="clause", text=text, level=5, page_number=page_number
             )
         else:
             # Default to paragraph
@@ -158,7 +151,7 @@ class PDFParser:
                 element_type="paragraph",
                 text=text,
                 level=level,
-                page_number=page_number
+                page_number=page_number,
             )
 
     def _infer_title_level(self, text: str) -> int:
@@ -174,7 +167,10 @@ class PDFParser:
         text_lower = text.lower().strip()
 
         # Check for common legal document keywords
-        if any(keyword in text_lower for keyword in ["luật", "nghị định", "thông tư", "quyết định"]):
+        if any(
+            keyword in text_lower
+            for keyword in ["luật", "nghị định", "thông tư", "quyết định"]
+        ):
             return 1
         elif text_lower.startswith("chương"):
             return 2
@@ -225,12 +221,14 @@ class DOCXParser:
             for table in doc.tables:
                 table_text = self._extract_table_text(table)
                 if table_text:
-                    elements.append(DocumentElement(
-                        element_type="table",
-                        text=table_text,
-                        level=5,
-                        page_number=0
-                    ))
+                    elements.append(
+                        DocumentElement(
+                            element_type="table",
+                            text=table_text,
+                            level=5,
+                            page_number=0,
+                        )
+                    )
 
             metadata["paragraph_count"] = len(doc.paragraphs)
             metadata["table_count"] = len(doc.tables)

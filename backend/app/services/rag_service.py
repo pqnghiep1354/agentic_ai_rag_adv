@@ -1,17 +1,15 @@
 """
 RAG service orchestrating retrieval and generation
 """
-import time
+
 import logging
-from typing import AsyncGenerator, Dict, Any, List, Optional
-from .retriever import HybridRetriever, RetrievedChunk, get_retriever
-from .llm_service import OllamaService, get_ollama_service
-from ..utils.prompts import (
-    LEGAL_SYSTEM_PROMPT,
-    build_rag_prompt,
-    build_followup_prompt
-)
+import time
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
 from ..core.config import settings
+from ..utils.prompts import LEGAL_SYSTEM_PROMPT, build_rag_prompt
+from .llm_service import OllamaService, get_ollama_service
+from .retriever import HybridRetriever, RetrievedChunk, get_retriever
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +28,7 @@ class RAGResponse:
         retrieval_time: float,
         generation_time: float,
         total_time: float,
-        tokens_used: int = 0
+        tokens_used: int = 0,
     ):
         self.query = query
         self.response = response
@@ -51,7 +49,7 @@ class RAGResponse:
             "retrieval_time": self.retrieval_time,
             "generation_time": self.generation_time,
             "total_time": self.total_time,
-            "tokens_used": self.tokens_used
+            "tokens_used": self.tokens_used,
         }
 
 
@@ -64,7 +62,7 @@ class RAGService:
         self,
         retriever: HybridRetriever = None,
         llm_service: OllamaService = None,
-        max_context_tokens: int = None
+        max_context_tokens: int = None,
     ):
         self.retriever = retriever or get_retriever()
         self.llm_service = llm_service or get_ollama_service()
@@ -76,7 +74,7 @@ class RAGService:
         conversation_history: List[Dict[str, str]] = None,
         filters: Optional[Dict[str, Any]] = None,
         temperature: float = 0.7,
-        max_tokens: int = 2048
+        max_tokens: int = 2048,
     ) -> RAGResponse:
         """
         Process query using RAG pipeline (non-streaming)
@@ -99,12 +97,13 @@ class RAGService:
             retrieval_start = time.time()
 
             retrieved_chunks = await self.retriever.retrieve(
-                query=query,
-                filters=filters
+                query=query, filters=filters
             )
 
             retrieval_time = time.time() - retrieval_start
-            logger.info(f"Retrieved {len(retrieved_chunks)} chunks in {retrieval_time:.2f}s")
+            logger.info(
+                f"Retrieved {len(retrieved_chunks)} chunks in {retrieval_time:.2f}s"
+            )
 
             if not retrieved_chunks:
                 return RAGResponse(
@@ -115,7 +114,7 @@ class RAGService:
                     retrieval_time=retrieval_time,
                     generation_time=0.0,
                     total_time=time.time() - start_time,
-                    tokens_used=0
+                    tokens_used=0,
                 )
 
             # Step 2: Build prompt
@@ -123,7 +122,7 @@ class RAGService:
             prompt = build_rag_prompt(
                 query=query,
                 retrieved_chunks=chunks_dicts,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
             )
 
             # Step 3: Generate response
@@ -134,7 +133,7 @@ class RAGService:
                 prompt=prompt,
                 system=LEGAL_SYSTEM_PROMPT,
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
             )
 
             generation_time = time.time() - generation_start
@@ -153,7 +152,7 @@ class RAGService:
                 retrieval_time=retrieval_time,
                 generation_time=generation_time,
                 total_time=total_time,
-                tokens_used=self._estimate_tokens(prompt + response)
+                tokens_used=self._estimate_tokens(prompt + response),
             )
 
             logger.info(f"RAG query completed in {total_time:.2f}s")
@@ -169,7 +168,7 @@ class RAGService:
         conversation_history: List[Dict[str, str]] = None,
         filters: Optional[Dict[str, Any]] = None,
         temperature: float = 0.7,
-        max_tokens: int = 2048
+        max_tokens: int = 2048,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Process query using RAG pipeline with streaming
@@ -192,12 +191,13 @@ class RAGService:
             retrieval_start = time.time()
 
             retrieved_chunks = await self.retriever.retrieve(
-                query=query,
-                filters=filters
+                query=query, filters=filters
             )
 
             retrieval_time = time.time() - retrieval_start
-            logger.info(f"Retrieved {len(retrieved_chunks)} chunks in {retrieval_time:.2f}s")
+            logger.info(
+                f"Retrieved {len(retrieved_chunks)} chunks in {retrieval_time:.2f}s"
+            )
 
             # Yield retrieval metadata first
             sources = self._extract_sources(retrieved_chunks)
@@ -205,18 +205,15 @@ class RAGService:
                 "type": "metadata",
                 "sources": sources,
                 "retrieved_count": len(retrieved_chunks),
-                "retrieval_time": retrieval_time
+                "retrieval_time": retrieval_time,
             }
 
             if not retrieved_chunks:
                 yield {
                     "type": "text",
-                    "content": "Tôi không tìm thấy thông tin liên quan trong cơ sở dữ liệu văn bản pháp luật."
+                    "content": "Tôi không tìm thấy thông tin liên quan trong cơ sở dữ liệu văn bản pháp luật.",
                 }
-                yield {
-                    "type": "done",
-                    "total_time": time.time() - start_time
-                }
+                yield {"type": "done", "total_time": time.time() - start_time}
                 return
 
             # Step 2: Build prompt
@@ -224,7 +221,7 @@ class RAGService:
             prompt = build_rag_prompt(
                 query=query,
                 retrieved_chunks=chunks_dicts,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
             )
 
             # Step 3: Stream generation
@@ -236,13 +233,10 @@ class RAGService:
                 prompt=prompt,
                 system=LEGAL_SYSTEM_PROMPT,
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
             ):
                 full_response += chunk
-                yield {
-                    "type": "text",
-                    "content": chunk
-                }
+                yield {"type": "text", "content": chunk}
 
             generation_time = time.time() - generation_start
             logger.info(f"Streamed response in {generation_time:.2f}s")
@@ -253,17 +247,14 @@ class RAGService:
                 "type": "done",
                 "generation_time": generation_time,
                 "total_time": total_time,
-                "tokens_used": self._estimate_tokens(prompt + full_response)
+                "tokens_used": self._estimate_tokens(prompt + full_response),
             }
 
             logger.info(f"RAG query (streaming) completed in {total_time:.2f}s")
 
         except Exception as e:
             logger.error(f"RAG streaming error: {e}")
-            yield {
-                "type": "error",
-                "message": f"Đã xảy ra lỗi: {str(e)}"
-            }
+            yield {"type": "error", "message": f"Đã xảy ra lỗi: {str(e)}"}
 
     async def query_with_chat_history(
         self,
@@ -272,7 +263,7 @@ class RAGService:
         filters: Optional[Dict[str, Any]] = None,
         temperature: float = 0.7,
         max_tokens: int = 2048,
-        stream: bool = False
+        stream: bool = False,
     ):
         """
         Process query with conversation history
@@ -288,16 +279,13 @@ class RAGService:
         Returns:
             RAGResponse or AsyncGenerator
         """
-        # Check if this is a follow-up question
-        is_followup = len(conversation_history) > 0
-
         if stream:
             return self.query_stream(
                 query=query,
                 conversation_history=conversation_history,
                 filters=filters,
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
             )
         else:
             return await self.query(
@@ -305,13 +293,10 @@ class RAGService:
                 conversation_history=conversation_history,
                 filters=filters,
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
             )
 
-    def _extract_sources(
-        self,
-        chunks: List[RetrievedChunk]
-    ) -> List[Dict[str, Any]]:
+    def _extract_sources(self, chunks: List[RetrievedChunk]) -> List[Dict[str, Any]]:
         """
         Extract unique sources from retrieved chunks
 
@@ -336,7 +321,7 @@ class RAGService:
                     "section_title": metadata.get("section_title"),
                     "article_number": metadata.get("article_number"),
                     "page_number": metadata.get("page_number"),
-                    "relevance_score": chunk.final_score
+                    "relevance_score": chunk.final_score,
                 }
 
                 sources.append(source)
@@ -384,15 +369,12 @@ class RAGService:
                 "healthy": llm_healthy and retriever_healthy,
                 "llm_healthy": llm_healthy,
                 "retriever_healthy": retriever_healthy,
-                "model": self.llm_service.model
+                "model": self.llm_service.model,
             }
 
         except Exception as e:
             logger.error(f"Health check error: {e}")
-            return {
-                "healthy": False,
-                "error": str(e)
-            }
+            return {"healthy": False, "error": str(e)}
 
 
 # Global singleton instance

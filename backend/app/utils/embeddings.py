@@ -4,10 +4,11 @@ Handles text encoding for semantic search.
 """
 
 import logging
-from typing import List, Union, Optional
+from typing import List, Optional, Union
+
+import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
-import numpy as np
 
 from app.core.config import settings
 
@@ -52,7 +53,9 @@ class EmbeddingService:
         try:
             self.model = SentenceTransformer(model_name, device=self.device)
             self.embedding_dimension = self.model.get_sentence_embedding_dimension()
-            logger.info(f"Model loaded successfully. Embedding dimension: {self.embedding_dimension}")
+            logger.info(
+                f"Model loaded successfully. Embedding dimension: {self.embedding_dimension}"
+            )
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
             raise
@@ -188,12 +191,15 @@ class EmbeddingService:
             batch_embeddings = self.encode_passages(
                 batch_texts,
                 normalize=normalize,
-                show_progress=show_progress and i == 0,  # Show progress only for first batch
+                show_progress=show_progress
+                and i == 0,  # Show progress only for first batch
             )
             all_embeddings.extend(batch_embeddings)
 
             if show_progress:
-                logger.info(f"Processed {min(i + batch_size, len(texts))}/{len(texts)} passages")
+                logger.info(
+                    f"Processed {min(i + batch_size, len(texts))}/{len(texts)} passages"
+                )
 
         return all_embeddings
 

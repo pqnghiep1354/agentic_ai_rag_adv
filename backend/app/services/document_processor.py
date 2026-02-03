@@ -10,25 +10,26 @@ Orchestrates the complete ingestion pipeline:
 
 import logging
 import time
-from typing import Dict, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain.document import Document, DocumentStatus
-from app.utils.document_parser import parse_document, DocumentElement
-from app.utils.chunking import HierarchicalChunker, Chunk
-from app.utils.embeddings import get_embedding_service
-from app.repositories.vector_repo import get_vector_repository
-from app.repositories.graph_repo import get_graph_repository
 from app.core.config import settings
+from app.models.domain.document import Document, DocumentStatus
+from app.repositories.graph_repo import get_graph_repository
+from app.repositories.vector_repo import get_vector_repository
+from app.utils.chunking import HierarchicalChunker
+from app.utils.document_parser import parse_document
+from app.utils.embeddings import get_embedding_service
 
 logger = logging.getLogger(__name__)
 
 
 class DocumentProcessingError(Exception):
     """Custom exception for document processing errors."""
+
     pass
 
 
@@ -98,7 +99,7 @@ class DocumentProcessor:
             logger.info(f"Parsed {len(elements)} elements from {document.filename}")
 
             # Stage 2: Chunk document
-            logger.info(f"[2/5] Chunking document with hierarchical strategy")
+            logger.info("[2/5] Chunking document with hierarchical strategy")
             chunks = self.chunker.chunk_document(elements, document_id)
 
             document.chunk_count = len(chunks)
@@ -117,7 +118,7 @@ class DocumentProcessor:
             logger.info(f"Generated {len(embeddings)} embeddings")
 
             # Stage 4: Index in Qdrant
-            logger.info(f"[4/5] Indexing chunks in Qdrant")
+            logger.info("[4/5] Indexing chunks in Qdrant")
 
             # Ensure collection exists
             try:
@@ -131,7 +132,7 @@ class DocumentProcessor:
             logger.info(f"Indexed {len(chunks)} chunks in Qdrant")
 
             # Stage 5: Build knowledge graph
-            logger.info(f"[5/5] Building knowledge graph in Neo4j")
+            logger.info("[5/5] Building knowledge graph in Neo4j")
 
             # Create document node
             self.graph_repo.create_document_node(
@@ -172,7 +173,9 @@ class DocumentProcessor:
         except Exception as e:
             # Update document status to FAILED
             error_message = str(e)
-            logger.error(f"Document processing failed for {document_id}: {error_message}")
+            logger.error(
+                f"Document processing failed for {document_id}: {error_message}"
+            )
 
             document.status = DocumentStatus.FAILED
             document.processing_error = error_message

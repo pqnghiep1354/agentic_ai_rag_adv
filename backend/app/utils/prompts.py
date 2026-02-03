@@ -1,15 +1,17 @@
 """
 Prompt templates for Vietnamese legal Q&A
 """
-from typing import List, Dict, Any
 
+from typing import Any, Dict, List
 
 # System prompt for Vietnamese legal assistant
-LEGAL_SYSTEM_PROMPT = """Bạn là trợ lý AI chuyên về luật môi trường Việt Nam. Nhiệm vụ của bạn là trả lời câu hỏi dựa trên các văn bản pháp luật được cung cấp.
+LEGAL_SYSTEM_PROMPT = """Bạn là trợ lý AI chuyên về luật môi trường Việt Nam. Nhiệm vụ của bạn \
+là trả lời câu hỏi dựa trên các văn bản pháp luật được cung cấp.
 
 NGUYÊN TẮC QUAN TRỌNG:
 1. Chỉ trả lời dựa trên thông tin có trong các văn bản được cung cấp
-2. Nếu không tìm thấy thông tin liên quan, hãy nói rõ "Tôi không tìm thấy thông tin về điều này trong các văn bản được cung cấp"
+2. Nếu không tìm thấy thông tin liên quan, hãy nói rõ \
+"Tôi không tìm thấy thông tin về điều này trong các văn bản được cung cấp"
 3. Trích dẫn chính xác tên văn bản, điều, khoản khi tham chiếu
 4. Trả lời bằng tiếng Việt rõ ràng, súc tích và chuyên nghiệp
 5. Nếu có nhiều quy định liên quan, hãy liệt kê và giải thích từng quy định
@@ -26,7 +28,7 @@ NGUYÊN TẮC QUAN TRỌNG:
 def build_rag_prompt(
     query: str,
     retrieved_chunks: List[Dict[str, Any]],
-    conversation_history: List[Dict[str, str]] = None
+    conversation_history: List[Dict[str, str]] = None,
 ) -> str:
     """
     Build RAG prompt with context and query
@@ -91,7 +93,9 @@ TRẢ LỜI:"""
     return prompt
 
 
-def build_citation_extraction_prompt(response: str, chunks: List[Dict[str, Any]]) -> str:
+def build_citation_extraction_prompt(
+    response: str, chunks: List[Dict[str, Any]]
+) -> str:
     """
     Build prompt to extract citations from response
 
@@ -105,21 +109,25 @@ def build_citation_extraction_prompt(response: str, chunks: List[Dict[str, Any]]
     sources = []
     for i, chunk in enumerate(chunks, 1):
         metadata = chunk.get("metadata", {})
-        sources.append({
-            "index": i,
-            "document": metadata.get("document_title", "Unknown"),
-            "article": metadata.get("article_number"),
-            "section": metadata.get("section_title"),
-            "page": metadata.get("page_number")
-        })
+        sources.append(
+            {
+                "index": i,
+                "document": metadata.get("document_title", "Unknown"),
+                "article": metadata.get("article_number"),
+                "section": metadata.get("section_title"),
+                "page": metadata.get("page_number"),
+            }
+        )
 
-    sources_text = "\n".join([
-        f"{s['index']}. {s['document']}" +
-        (f", Điều {s['article']}" if s['article'] else "") +
-        (f", {s['section']}" if s['section'] else "") +
-        (f", Trang {s['page']}" if s['page'] else "")
-        for s in sources
-    ])
+    sources_text = "\n".join(
+        [
+            f"{s['index']}. {s['document']}"
+            + (f", Điều {s['article']}" if s["article"] else "")
+            + (f", {s['section']}" if s["section"] else "")
+            + (f", Trang {s['page']}" if s["page"] else "")
+            for s in sources
+        ]
+    )
 
     prompt = f"""Dựa trên câu trả lời sau và các nguồn tài liệu, hãy xác định nguồn nào được sử dụng:
 
@@ -195,7 +203,7 @@ def build_extraction_prompt(text: str, entity_type: str) -> str:
         "articles": "các điều khoản (ví dụ: Điều 5, Khoản 2)",
         "penalties": "các hình phạt và mức xử phạt",
         "obligations": "các nghĩa vụ và trách nhiệm",
-        "definitions": "các định nghĩa và thuật ngữ"
+        "definitions": "các định nghĩa và thuật ngữ",
     }
 
     entity_desc = entity_types.get(entity_type, entity_type)
@@ -222,10 +230,9 @@ def build_comparison_prompt(texts: List[str], aspect: str) -> str:
     Returns:
         Comparison prompt
     """
-    texts_formatted = "\n\n".join([
-        f"VĂN BẢN {i+1}:\n{text}"
-        for i, text in enumerate(texts)
-    ])
+    texts_formatted = "\n\n".join(
+        [f"VĂN BẢN {i+1}:\n{text}" for i, text in enumerate(texts)]
+    )
 
     prompt = f"""Hãy so sánh {aspect} trong các văn bản pháp luật sau:
 
@@ -240,14 +247,28 @@ Phân tích điểm giống và khác nhau:"""
 FEW_SHOT_EXAMPLES = [
     {
         "query": "Xử phạt vi phạm môi trường như thế nào?",
-        "context": "[Nghị định 08/2022/NĐ-CP, Điều 5] Phạt tiền từ 50.000.000 đồng đến 75.000.000 đồng đối với hành vi xả thải chưa qua xử lý ra môi trường.",
-        "response": "Theo Nghị định 08/2022/NĐ-CP, Điều 5, hành vi xả thải chưa qua xử lý ra môi trường sẽ bị phạt tiền từ 50.000.000 đồng đến 75.000.000 đồng. Mức phạt cụ thể phụ thuộc vào tính chất và mức độ vi phạm."
+        "context": (
+            "[Nghị định 08/2022/NĐ-CP, Điều 5] Phạt tiền từ 50.000.000 đồng đến 75.000.000 đồng "
+            "đối với hành vi xả thải chưa qua xử lý ra môi trường."
+        ),
+        "response": (
+            "Theo Nghị định 08/2022/NĐ-CP, Điều 5, hành vi xả thải chưa qua xử lý ra môi trường "
+            "sẽ bị phạt tiền từ 50.000.000 đồng đến 75.000.000 đồng. "
+            "Mức phạt cụ thể phụ thuộc vào tính chất và mức độ vi phạm."
+        ),
     },
     {
         "query": "Ai phải thực hiện đánh giá tác động môi trường?",
-        "context": "[Luật Bảo vệ Môi trường 2020, Điều 28] Chủ dự án phải lập báo cáo đánh giá tác động môi trường đối với dự án thuộc danh mục phải thực hiện đánh giá tác động môi trường.",
-        "response": "Theo Luật Bảo vệ Môi trường 2020, Điều 28, chủ dự án có trách nhiệm lập báo cáo đánh giá tác động môi trường. Điều này áp dụng cho các dự án thuộc danh mục bắt buộc phải thực hiện đánh giá tác động môi trường theo quy định."
-    }
+        "context": (
+            "[Luật Bảo vệ Môi trường 2020, Điều 28] Chủ dự án phải lập báo cáo đánh giá tác động "
+            "môi trường đối với dự án thuộc danh mục phải thực hiện đánh giá tác động môi trường."
+        ),
+        "response": (
+            "Theo Luật Bảo vệ Môi trường 2020, Điều 28, chủ dự án có trách nhiệm lập báo cáo "
+            "đánh giá tác động môi trường. Điều này áp dụng cho các dự án thuộc danh mục bắt buộc "
+            "phải thực hiện đánh giá tác động môi trường theo quy định."
+        ),
+    },
 ]
 
 

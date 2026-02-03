@@ -4,12 +4,13 @@ Handles knowledge graph construction and multi-hop traversal for GraphRAG.
 """
 
 import logging
-from typing import List, Dict, Any, Optional, Set
-from neo4j import GraphDatabase, Driver
-from neo4j.exceptions import ServiceUnavailable
+from typing import Any, Dict, List, Optional
+
+from neo4j import GraphDatabase
 
 from app.core.config import settings
-from app.utils.chunking import Chunk, extract_legal_references, extract_entities
+from app.utils.chunking import (Chunk, extract_entities,
+                                extract_legal_references)
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,9 @@ class GraphRepository:
             )
 
     @staticmethod
-    def _create_document_node_tx(tx, document_id: int, filename: str, metadata: Dict[str, Any]):
+    def _create_document_node_tx(
+        tx, document_id: int, filename: str, metadata: Dict[str, Any]
+    ):
         """Transaction function to create document node."""
         query = """
         MERGE (d:Document {document_id: $document_id})
@@ -224,7 +227,9 @@ class GraphRepository:
             )
             count = result.single()["count"]
             if count > 0:
-                logger.debug(f"Created {count} REFERENCES from {source_chunk_id} for '{ref}'")
+                logger.debug(
+                    f"Created {count} REFERENCES from {source_chunk_id} for '{ref}'"
+                )
 
     def create_entity_nodes(
         self,
@@ -319,7 +324,9 @@ class GraphRepository:
         if not chunk_ids:
             return []
 
-        logger.debug(f"Finding related chunks for {len(chunk_ids)} seeds, depth={max_depth}")
+        logger.debug(
+            f"Finding related chunks for {len(chunk_ids)} seeds, depth={max_depth}"
+        )
 
         with self.driver.session() as session:
             result = session.execute_read(
@@ -378,14 +385,16 @@ class GraphRepository:
 
         related_chunks = []
         for record in result:
-            related_chunks.append({
-                "chunk_id": record["chunk_id"],
-                "text": record["text"],
-                "page_number": record["page_number"],
-                "hierarchy_level": record["hierarchy_level"],
-                "hierarchy_path": record["hierarchy_path"],
-                "relevance_score": record["relevance_score"],
-            })
+            related_chunks.append(
+                {
+                    "chunk_id": record["chunk_id"],
+                    "text": record["text"],
+                    "page_number": record["page_number"],
+                    "hierarchy_level": record["hierarchy_level"],
+                    "hierarchy_path": record["hierarchy_path"],
+                    "relevance_score": record["relevance_score"],
+                }
+            )
 
         logger.debug(f"Found {len(related_chunks)} related chunks")
         return related_chunks

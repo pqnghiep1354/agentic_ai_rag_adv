@@ -1,14 +1,17 @@
 """
 User Pydantic schemas for API validation
 """
+
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # Base schemas
 class UserBase(BaseModel):
     """Base user schema"""
+
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=100)
     full_name: Optional[str] = Field(None, max_length=255)
@@ -16,11 +19,13 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema for creating a new user"""
+
     password: str = Field(..., min_length=8, max_length=100)
 
 
 class UserUpdate(BaseModel):
     """Schema for updating user information"""
+
     email: Optional[EmailStr] = None
     username: Optional[str] = Field(None, min_length=3, max_length=100)
     full_name: Optional[str] = Field(None, max_length=255)
@@ -29,6 +34,7 @@ class UserUpdate(BaseModel):
 
 class UserInDB(UserBase):
     """Schema for user in database"""
+
     id: int
     is_active: bool
     is_superuser: bool
@@ -40,12 +46,14 @@ class UserInDB(UserBase):
 
 class User(UserInDB):
     """Schema for user response"""
+
     pass
 
 
 # Authentication schemas
 class Token(BaseModel):
     """Token response schema"""
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -53,6 +61,7 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     """Token payload schema"""
+
     sub: str
     exp: datetime
     type: str
@@ -60,10 +69,12 @@ class TokenPayload(BaseModel):
 
 class LoginRequest(BaseModel):
     """Login request schema"""
+
     username: str
     password: str
 
 
 class RefreshTokenRequest(BaseModel):
     """Refresh token request schema"""
+
     refresh_token: str

@@ -3,25 +3,22 @@ Document management endpoints.
 Handles upload, listing, deletion, and status tracking of documents.
 """
 
+import logging
 import os
 import shutil
-import logging
-from typing import List, Optional
+from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, BackgroundTasks
+from fastapi import (APIRouter, BackgroundTasks, Depends, File, HTTPException,
+                     UploadFile, status)
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.dependencies import get_current_user, get_db
 from app.models.domain.document import Document, DocumentStatus
 from app.models.domain.user import User
-from app.models.schemas.document import (
-    DocumentCreate,
-    DocumentResponse,
-    DocumentListResponse,
-    DocumentUpdate,
-)
-from app.core.config import settings
+from app.models.schemas.document import (DocumentListResponse, DocumentResponse,
+                                         DocumentUpdate)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -68,7 +65,9 @@ async def save_upload_file(file: UploadFile, destination: str) -> None:
         shutil.copyfileobj(file.file, buffer)
 
 
-@router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED
+)
 async def upload_document(
     file: UploadFile = File(...),
     background_tasks: BackgroundTasks = BackgroundTasks(),
@@ -114,6 +113,7 @@ async def upload_document(
     async def process_document_task(doc_id: int):
         """Background task to process document."""
         from app.core.database import get_session_maker
+
         async_session = get_session_maker()
         async with async_session() as session:
             processor = get_document_processor()
@@ -142,7 +142,7 @@ async def list_documents(
     - **limit**: Maximum number of documents to return
     - **status_filter**: Filter by document status (optional)
     """
-    from sqlalchemy import select, func
+    from sqlalchemy import func, select
 
     # Base query
     query = select(Document).where(Document.owner_id == current_user.id)
@@ -310,13 +310,16 @@ async def reprocess_document(
     async def reprocess_document_task(doc_id: int):
         """Background task to reprocess document."""
         from app.core.database import get_session_maker
+
         async_session = get_session_maker()
         async with async_session() as session:
             processor = get_document_processor()
             try:
                 await processor.reprocess_document(doc_id, session)
             except Exception as e:
-                logger.error(f"Background reprocessing failed for document {doc_id}: {e}")
+                logger.error(
+                    f"Background reprocessing failed for document {doc_id}: {e}"
+                )
 
     background_tasks.add_task(reprocess_document_task, document.id)
 
