@@ -168,11 +168,12 @@ alembic upgrade head
 alembic revision --autogenerate -m "description"
 
 # Chạy tests
-pytest
+pytest tests/ -v
 
-# Linting
-flake8 app/
+# Linting và formatting
+isort --profile black app/
 black app/
+flake8 app/
 ```
 
 ### Frontend Development
@@ -184,14 +185,34 @@ docker-compose exec frontend sh
 # Install dependencies
 npm install
 
+# Development server
+npm run dev
+
 # Build
 npm run build
 
-# Linting
-npm run lint
+# Tests
+npm test
 
-# Format
+# Linting & Formatting
+npm run lint
 npm run format
+```
+
+### Local Development (Without Docker)
+
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+# Set environment variables (see .env.example)
+python -m pytest tests/unit/ -v  # Run unit tests
+
+# Frontend
+cd frontend
+npm install
+npm run dev  # Start dev server
+npm test     # Run tests
 ```
 
 ## 📖 Sử Dụng Hệ Thống
@@ -225,20 +246,65 @@ npm run format
 
 ## 🧪 Testing
 
-### Chạy Tests
+### Backend Tests
 
 ```bash
-# Backend tests
-docker-compose exec backend pytest
+# Run all backend tests
+cd backend
+python -m pytest tests/ -v
 
-# With coverage
-docker-compose exec backend pytest --cov=app --cov-report=html
+# Run only unit tests
+python -m pytest tests/unit/ -v
 
-# Frontend tests
-docker-compose exec frontend npm test
+# Run with coverage
+python -m pytest tests/ --cov=app --cov-report=html
 
-# E2E tests
-docker-compose exec frontend npm run test:e2e
+# Run specific test file
+python -m pytest tests/unit/test_security.py -v
+
+# Run tests by marker
+python -m pytest -m "unit" tests/ -v
+```
+
+**Test Structure:**
+- `tests/unit/` - Unit tests for core modules (security, config, models, services)
+- `tests/integration/` - Integration tests for API endpoints (requires Docker services)
+
+**Current Coverage:**
+- Unit tests: 79 tests passing
+- Integration tests: 6 tests (require Docker services)
+- 4 tests skipped (bcrypt/passlib version compatibility)
+
+### Frontend Tests
+
+```bash
+# Install dependencies first
+cd frontend
+npm install
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test
+
+# Run with coverage
+npm run test:coverage
+```
+
+**Test Structure:**
+- `src/components/**/*.test.tsx` - Component tests
+- `src/stores/*.test.ts` - Store tests
+- `src/test/setup.ts` - Test setup with mocks
+
+### E2E Tests (Coming Soon)
+
+```bash
+# Install Playwright
+npx playwright install
+
+# Run E2E tests
+npm run test:e2e
 ```
 
 ### Test Data
@@ -321,42 +387,43 @@ docker-compose exec backend alembic upgrade head
 - [x] Database models
 - [x] Authentication
 
-### Phase 2: Document Processing (In Progress)
-- [ ] Upload API
-- [ ] PDF/DOCX parsing
-- [ ] Hierarchical chunking
-- [ ] Embedding generation
-- [ ] Qdrant indexing
-- [ ] Neo4j graph construction
+### Phase 2: Document Processing ✅ (COMPLETED)
+- [x] Upload API
+- [x] PDF/DOCX parsing
+- [x] Hierarchical chunking
+- [x] Embedding generation
+- [x] Qdrant indexing
+- [x] Neo4j graph construction
 
-### Phase 3: RAG Pipeline
-- [ ] Ollama integration
-- [ ] Hybrid retrieval
-- [ ] Graph traversal
-- [ ] Re-ranking
-- [ ] Context assembly
-- [ ] Prompt engineering
+### Phase 3: RAG Pipeline ✅ (COMPLETED)
+- [x] Ollama integration
+- [x] Hybrid retrieval
+- [x] Graph traversal
+- [x] Re-ranking
+- [x] Context assembly
+- [x] Prompt engineering
 
-### Phase 4: Frontend & UX
-- [ ] Chat interface
-- [ ] Real-time streaming
-- [ ] Citation display
-- [ ] Document management
-- [ ] Export functionality
+### Phase 4: Frontend & UX ✅ (COMPLETED)
+- [x] Chat interface with WebSocket streaming
+- [x] Real-time streaming responses
+- [x] Citation display with source links
+- [x] Document management UI
+- [x] Export functionality (PDF/Excel)
 
-### Phase 5: Advanced Features
-- [ ] Admin dashboard
-- [ ] Conversation history
-- [ ] Performance optimization
-- [ ] Security hardening
-- [ ] Monitoring
+### Phase 5: Advanced Features ✅ (COMPLETED)
+- [x] Admin dashboard with analytics
+- [x] Conversation history management
+- [x] Performance optimization (Redis caching)
+- [x] Security hardening (rate limiting, input sanitization)
+- [x] Monitoring (query logs, usage stats)
 
-### Phase 6: Testing & Deployment
-- [ ] Unit tests
-- [ ] Integration tests
-- [ ] E2E tests
-- [ ] Performance testing
-- [ ] CI/CD pipeline
+### Phase 6: Testing & Deployment 🚧 (IN PROGRESS)
+- [x] Backend unit tests (79 tests passing)
+- [x] Backend integration tests structure
+- [x] Frontend unit tests setup (Vitest)
+- [ ] E2E tests (Playwright)
+- [ ] Performance testing (Locust)
+- [ ] CI/CD pipeline (GitHub Actions)
 
 ## 🤝 Contributing
 
@@ -386,6 +453,6 @@ Contributions are welcome! Please:
 
 ---
 
-**Ghi chú**: Dự án đang trong giai đoạn phát triển. Phase 1 (Foundation) đã hoàn thành ✅
+**Ghi chú**: Dự án đang trong giai đoạn phát triển. Phases 1-5 đã hoàn thành ✅. Phase 6 (Testing & Deployment) đang tiến hành 🚧
 
 **Built with** ❤️ for Vietnamese Environmental Law Community
