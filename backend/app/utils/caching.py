@@ -144,9 +144,7 @@ class CacheService:
             logger.error(f"Cache increment error for key {key}: {e}")
             return 0
 
-    async def get_or_set(
-        self, key: str, func: Callable, ttl: Optional[int] = None, *args, **kwargs
-    ) -> Any:
+    async def get_or_set(self, key: str, func: Callable, ttl: Optional[int] = None, *args, **kwargs) -> Any:
         """
         Get from cache or compute and set
 
@@ -168,11 +166,7 @@ class CacheService:
 
         # Cache miss, compute value
         logger.debug(f"Cache miss for key: {key}")
-        value = (
-            await func(*args, **kwargs)
-            if asyncio.iscoroutinefunction(func)
-            else func(*args, **kwargs)
-        )
+        value = await func(*args, **kwargs) if asyncio.iscoroutinefunction(func) else func(*args, **kwargs)
 
         # Store in cache
         await self.set(key, value, ttl)
@@ -240,9 +234,7 @@ def cached(ttl: int = 3600, key_prefix: str = "cache"):
             # Generate cache key
             # Skip 'self' or 'cls' for methods
             cache_args = args[1:] if args and hasattr(args[0], "__class__") else args
-            key = cache_key(
-                *cache_args, prefix=f"{key_prefix}:{func.__name__}", **kwargs
-            )
+            key = cache_key(*cache_args, prefix=f"{key_prefix}:{func.__name__}", **kwargs)
 
             # Try cache
             cache = CacheService(redis, default_ttl=ttl)
@@ -283,9 +275,7 @@ class QueryCache:
             return f"{self.prefix}:user:{user_id}:{query_hash}"
         return f"{self.prefix}:{query_hash}"
 
-    async def get_query_result(
-        self, query: str, user_id: Optional[int] = None
-    ) -> Optional[dict]:
+    async def get_query_result(self, query: str, user_id: Optional[int] = None) -> Optional[dict]:
         """
         Get cached query result
 
@@ -299,9 +289,7 @@ class QueryCache:
         key = self._query_key(query, user_id)
         return await self.cache.get(key)
 
-    async def set_query_result(
-        self, query: str, result: dict, user_id: Optional[int] = None, ttl: int = 3600
-    ) -> bool:
+    async def set_query_result(self, query: str, result: dict, user_id: Optional[int] = None, ttl: int = 3600) -> bool:
         """
         Cache query result
 
@@ -359,9 +347,7 @@ class EmbeddingCache:
         key = self._embedding_key(text, model)
         return await self.cache.get(key)
 
-    async def set_embedding(
-        self, text: str, embedding: list, model: str = "default", ttl: int = 86400
-    ) -> bool:
+    async def set_embedding(self, text: str, embedding: list, model: str = "default", ttl: int = 86400) -> bool:
         """
         Cache embedding
 

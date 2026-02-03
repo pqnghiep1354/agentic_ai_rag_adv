@@ -27,9 +27,7 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(
-    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
-) -> str:
+def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     """
     Create a JWT access token
 
@@ -45,14 +43,10 @@ def create_access_token(
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update({"exp": expire, "type": "access"})
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
@@ -69,9 +63,7 @@ def create_refresh_token(data: Dict[str, Any]) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "type": "refresh"})
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
@@ -89,9 +81,7 @@ def decode_token(token: str) -> Dict[str, Any]:
         HTTPException: If token is invalid or expired
     """
     try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
     except JWTError as e:
         raise HTTPException(
@@ -179,9 +169,7 @@ class RateLimiter:
         return max(0, self.max_requests - int(current))
 
 
-async def rate_limit_dependency(
-    request: Request, redis: Redis, user_id: Optional[str] = None
-) -> bool:
+async def rate_limit_dependency(request: Request, redis: Redis, user_id: Optional[str] = None) -> bool:
     """
     FastAPI dependency for rate limiting
 
@@ -217,9 +205,7 @@ def sanitize_string(text: str, max_length: int = 10000) -> str:
         HTTPException: If validation fails
     """
     if not text:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Input text cannot be empty"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Input text cannot be empty")
 
     # Remove null bytes
     text = text.replace("\x00", "")
@@ -232,11 +218,7 @@ def sanitize_string(text: str, max_length: int = 10000) -> str:
         )
 
     # Remove control characters except newlines, tabs
-    text = "".join(
-        char
-        for char in text
-        if char == "\n" or char == "\t" or not (0 <= ord(char) < 32)
-    )
+    text = "".join(char for char in text if char == "\n" or char == "\t" or not (0 <= ord(char) < 32))
 
     return text.strip()
 
@@ -328,9 +310,7 @@ def sanitize_filename(filename: str) -> str:
 
     # Check for dangerous patterns
     if ".." in filename or filename.startswith("."):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
 
     # Only allow alphanumeric, dash, underscore, dot
     if not re.match(r"^[a-zA-Z0-9_\-. ]+$", filename):
@@ -341,8 +321,6 @@ def sanitize_filename(filename: str) -> str:
 
     # Limit length
     if len(filename) > 255:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Filename too long"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Filename too long")
 
     return filename

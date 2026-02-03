@@ -97,12 +97,8 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, description="User message")
     conversation_id: Optional[int] = Field(None, description="Existing conversation ID")
     stream: bool = Field(default=False, description="Enable streaming")
-    temperature: float = Field(
-        default=0.7, ge=0.0, le=1.0, description="LLM temperature"
-    )
-    max_tokens: int = Field(
-        default=2048, ge=100, le=4096, description="Max tokens to generate"
-    )
+    temperature: float = Field(default=0.7, ge=0.0, le=1.0, description="LLM temperature")
+    max_tokens: int = Field(default=2048, ge=100, le=4096, description="Max tokens to generate")
 
 
 class ChatResponse(BaseModel):

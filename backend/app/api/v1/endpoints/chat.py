@@ -75,14 +75,10 @@ async def chat(
         history_messages = result.scalars().all()
 
         # Build conversation history for context
-        conversation_history = [
-            {"role": msg.role, "content": msg.content} for msg in history_messages
-        ]
+        conversation_history = [{"role": msg.role, "content": msg.content} for msg in history_messages]
 
         # Create user message
-        user_message = Message(
-            conversation_id=conversation.id, role="user", content=request.message
-        )
+        user_message = Message(conversation_id=conversation.id, role="user", content=request.message)
         db.add(user_message)
         await db.flush()
 
@@ -100,12 +96,9 @@ async def chat(
             role="assistant",
             content=rag_response.response,
             sources=rag_response.sources,
-            retrieved_chunks=[
-                chunk.to_dict() for chunk in rag_response.retrieved_chunks
-            ],
+            retrieved_chunks=[chunk.to_dict() for chunk in rag_response.retrieved_chunks],
             retrieval_score=(
-                sum(chunk.final_score for chunk in rag_response.retrieved_chunks)
-                / len(rag_response.retrieved_chunks)
+                sum(chunk.final_score for chunk in rag_response.retrieved_chunks) / len(rag_response.retrieved_chunks)
                 if rag_response.retrieved_chunks
                 else 0.0
             ),
@@ -166,9 +159,7 @@ async def list_conversations(
         conversations = result.scalars().all()
 
         return ConversationListResponse(
-            conversations=[
-                ConversationResponse.model_validate(conv) for conv in conversations
-            ],
+            conversations=[ConversationResponse.model_validate(conv) for conv in conversations],
             total=total,
             skip=skip,
             limit=limit,
@@ -201,16 +192,12 @@ async def get_conversation(
         conversation = result.scalar_one_or_none()
 
         if not conversation:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
 
         if include_messages:
             # Load messages
             result = await db.execute(
-                select(Message)
-                .where(Message.conversation_id == conversation_id)
-                .order_by(Message.created_at)
+                select(Message).where(Message.conversation_id == conversation_id).order_by(Message.created_at)
             )
             conversation.messages = result.scalars().all()
 
@@ -239,9 +226,7 @@ async def create_conversation(
     Create a new conversation
     """
     try:
-        new_conversation = Conversation(
-            title=conversation.title, user_id=current_user.id
-        )
+        new_conversation = Conversation(title=conversation.title, user_id=current_user.id)
         db.add(new_conversation)
         await db.commit()
         await db.refresh(new_conversation)
@@ -276,9 +261,7 @@ async def update_conversation(
         conversation = result.scalar_one_or_none()
 
         if not conversation:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
 
         # Update fields
         if update.title is not None:
@@ -303,9 +286,7 @@ async def update_conversation(
         )
 
 
-@router.delete(
-    "/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_conversation(
     conversation_id: int,
     db: AsyncSession = Depends(get_db),
@@ -324,9 +305,7 @@ async def delete_conversation(
         conversation = result.scalar_one_or_none()
 
         if not conversation:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
 
         await db.delete(conversation)
         await db.commit()
@@ -354,16 +333,12 @@ async def submit_feedback(
     try:
         # Get message and verify ownership
         result = await db.execute(
-            select(Message)
-            .join(Conversation)
-            .where(Message.id == message_id, Conversation.user_id == current_user.id)
+            select(Message).join(Conversation).where(Message.id == message_id, Conversation.user_id == current_user.id)
         )
         message = result.scalar_one_or_none()
 
         if not message:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Message not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
 
         # Update feedback
         message.feedback_rating = feedback.rating

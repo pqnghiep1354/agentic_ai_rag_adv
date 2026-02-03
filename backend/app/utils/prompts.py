@@ -93,9 +93,7 @@ TRẢ LỜI:"""
     return prompt
 
 
-def build_citation_extraction_prompt(
-    response: str, chunks: List[Dict[str, Any]]
-) -> str:
+def build_citation_extraction_prompt(response: str, chunks: List[Dict[str, Any]]) -> str:
     """
     Build prompt to extract citations from response
 
@@ -230,9 +228,7 @@ def build_comparison_prompt(texts: List[str], aspect: str) -> str:
     Returns:
         Comparison prompt
     """
-    texts_formatted = "\n\n".join(
-        [f"VĂN BẢN {i+1}:\n{text}" for i, text in enumerate(texts)]
-    )
+    texts_formatted = "\n\n".join([f"VĂN BẢN {i+1}:\n{text}" for i, text in enumerate(texts)])
 
     prompt = f"""Hãy so sánh {aspect} trong các văn bản pháp luật sau:
 

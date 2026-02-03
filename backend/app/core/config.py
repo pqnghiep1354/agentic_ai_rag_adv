@@ -76,9 +76,7 @@ class Settings(BaseSettings):
     # Monitoring
     ENABLE_METRICS: bool = True
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore")
 
 
 # Global settings instance

@@ -34,9 +34,7 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
     # Check if user has admin role/is_superuser
     # In real implementation, check user.is_superuser from database
     if not current_user.get("is_superuser", False):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
     return current_user
 
 
@@ -65,25 +63,17 @@ async def get_dashboard_stats(
 
     # Active users
     active_users_24h = await db.scalar(
-        select(func.count(distinct(Conversation.user_id))).where(
-            Conversation.last_message_at >= last_24h
-        )
+        select(func.count(distinct(Conversation.user_id))).where(Conversation.last_message_at >= last_24h)
     )
     active_users_7d = await db.scalar(
-        select(func.count(distinct(Conversation.user_id))).where(
-            Conversation.last_message_at >= last_7d
-        )
+        select(func.count(distinct(Conversation.user_id))).where(Conversation.last_message_at >= last_7d)
     )
     active_users_30d = await db.scalar(
-        select(func.count(distinct(Conversation.user_id))).where(
-            Conversation.last_message_at >= last_30d
-        )
+        select(func.count(distinct(Conversation.user_id))).where(Conversation.last_message_at >= last_30d)
     )
 
     # Document status breakdown
-    doc_status_query = select(
-        Document.status, func.count(Document.id).label("count")
-    ).group_by(Document.status)
+    doc_status_query = select(Document.status, func.count(Document.id).label("count")).group_by(Document.status)
     doc_status_result = await db.execute(doc_status_query)
     doc_status = {status: count for status, count in doc_status_result.all()}
 
@@ -118,9 +108,7 @@ async def get_dashboard_stats(
     recent_messages = [
         {
             "id": msg.id,
-            "query": (
-                msg.content[:100] + "..." if len(msg.content) > 100 else msg.content
-            ),
+            "query": (msg.content[:100] + "..." if len(msg.content) > 100 else msg.content),
             "user": msg.username,
             "conversation": msg.title,
             "processing_time": msg.processing_time,
@@ -162,9 +150,7 @@ async def get_dashboard_stats(
             "total_tokens_7d": query_metrics.total_tokens or 0,
             "avg_retrieval_score": float(query_metrics.avg_retrieval_score or 0),
             "avg_feedback_rating": (
-                float(query_metrics.avg_feedback_rating or 0)
-                if query_metrics.avg_feedback_rating
-                else None
+                float(query_metrics.avg_feedback_rating or 0) if query_metrics.avg_feedback_rating else None
             ),
         },
         "recent_activity": recent_messages,
@@ -199,16 +185,12 @@ async def get_document_analytics(
         .order_by(func.date(Document.created_at))
     )
     upload_trends = await db.execute(upload_trends_query)
-    upload_by_day = [
-        {"date": str(row.date), "count": row.count} for row in upload_trends.all()
-    ]
+    upload_by_day = [{"date": str(row.date), "count": row.count} for row in upload_trends.all()]
 
     # Processing performance
     processing_stats_query = select(
         func.count(Document.id).label("total"),
-        func.avg(
-            func.extract("epoch", Document.processed_at - Document.created_at)
-        ).label("avg_processing_seconds"),
+        func.avg(func.extract("epoch", Document.processed_at - Document.created_at)).label("avg_processing_seconds"),
         func.sum(Document.chunk_count).label("total_chunks"),
         func.avg(Document.chunk_count).label("avg_chunks_per_doc"),
     ).where(
@@ -267,9 +249,7 @@ async def get_document_analytics(
         "upload_trends": upload_by_day,
         "processing_performance": {
             "total_processed": processing_stats.total or 0,
-            "avg_processing_seconds": float(
-                processing_stats.avg_processing_seconds or 0
-            ),
+            "avg_processing_seconds": float(processing_stats.avg_processing_seconds or 0),
             "total_chunks": processing_stats.total_chunks or 0,
             "avg_chunks_per_document": float(processing_stats.avg_chunks_per_doc or 0),
         },
@@ -306,9 +286,7 @@ async def get_query_analytics(
         .order_by(func.date(Message.created_at))
     )
     query_volume = await db.execute(query_volume_query)
-    queries_by_day = [
-        {"date": str(row.date), "count": row.count} for row in query_volume.all()
-    ]
+    queries_by_day = [{"date": str(row.date), "count": row.count} for row in query_volume.all()]
 
     # Performance metrics (percentiles)
     performance_query = select(
@@ -316,15 +294,9 @@ async def get_query_analytics(
         func.min(Message.processing_time).label("min_time"),
         func.max(Message.processing_time).label("max_time"),
         func.avg(Message.processing_time).label("avg_time"),
-        func.percentile_cont(0.50)
-        .within_group(Message.processing_time)
-        .label("p50_time"),
-        func.percentile_cont(0.95)
-        .within_group(Message.processing_time)
-        .label("p95_time"),
-        func.percentile_cont(0.99)
-        .within_group(Message.processing_time)
-        .label("p99_time"),
+        func.percentile_cont(0.50).within_group(Message.processing_time).label("p50_time"),
+        func.percentile_cont(0.95).within_group(Message.processing_time).label("p95_time"),
+        func.percentile_cont(0.99).within_group(Message.processing_time).label("p99_time"),
     ).where(
         and_(
             Message.role == "assistant",
@@ -351,15 +323,11 @@ async def get_query_analytics(
     # Feedback distribution
     feedback_query = (
         select(Message.feedback_rating, func.count(Message.id).label("count"))
-        .where(
-            and_(Message.created_at >= cutoff_date, Message.feedback_rating.isnot(None))
-        )
+        .where(and_(Message.created_at >= cutoff_date, Message.feedback_rating.isnot(None)))
         .group_by(Message.feedback_rating)
     )
     feedback = await db.execute(feedback_query)
-    feedback_distribution = {
-        int(row.feedback_rating): row.count for row in feedback.all()
-    }
+    feedback_distribution = {int(row.feedback_rating): row.count for row in feedback.all()}
 
     # Most active users
     active_users_query = (
@@ -475,9 +443,7 @@ async def get_query_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     user_id: Optional[int] = Query(None, description="Filter by user ID"),
-    min_processing_time: Optional[float] = Query(
-        None, description="Min processing time (seconds)"
-    ),
+    min_processing_time: Optional[float] = Query(None, description="Min processing time (seconds)"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_admin),
 ) -> Dict[str, Any]:

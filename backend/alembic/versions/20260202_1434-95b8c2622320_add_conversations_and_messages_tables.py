@@ -64,9 +64,7 @@ def upgrade() -> None:
         sa.Column("document_number", sa.String(length=200), nullable=True),
         sa.Column(
             "status",
-            sa.Enum(
-                "PENDING", "PROCESSING", "COMPLETED", "FAILED", name="documentstatus"
-            ),
+            sa.Enum("PENDING", "PROCESSING", "COMPLETED", "FAILED", name="documentstatus"),
             nullable=False,
         ),
         sa.Column("processing_error", sa.Text(), nullable=True),
@@ -97,9 +95,7 @@ def upgrade() -> None:
         sa.Column("feedback_rating", sa.Integer(), nullable=True),
         sa.Column("feedback_comment", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["conversation_id"], ["conversations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["conversation_id"], ["conversations.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -108,9 +104,7 @@ def upgrade() -> None:
         ["conversation_id"],
         unique=False,
     )
-    op.create_index(
-        op.f("ix_messages_created_at"), "messages", ["created_at"], unique=False
-    )
+    op.create_index(op.f("ix_messages_created_at"), "messages", ["created_at"], unique=False)
     op.create_index(op.f("ix_messages_id"), "messages", ["id"], unique=False)
     # ### end Alembic commands ###
 
