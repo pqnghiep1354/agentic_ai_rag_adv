@@ -1,12 +1,5 @@
 import { create } from 'zustand'
-import type {
-  ChatState,
-  Conversation,
-  Message,
-  StreamingState,
-  ConnectionStatus,
-  WSMetadataMessage,
-} from '@/types'
+import type { ChatState, StreamingState, ConnectionStatus } from '@/types'
 
 const initialState = {
   conversations: [],

@@ -9,8 +9,7 @@ from typing import Any, Dict, List, Optional
 from neo4j import GraphDatabase
 
 from app.core.config import settings
-from app.utils.chunking import (Chunk, extract_entities,
-                                extract_legal_references)
+from app.utils.chunking import Chunk, extract_entities, extract_legal_references
 
 logger = logging.getLogger(__name__)
 

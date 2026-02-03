@@ -12,11 +12,16 @@ from ....core.database import get_db
 from ....core.dependencies import get_current_user
 from ....models.domain.conversation import Conversation, Message
 from ....models.domain.user import User
-from ....models.schemas.chat import (ChatRequest, ChatResponse,
-                                     ConversationCreate,
-                                     ConversationListResponse,
-                                     ConversationResponse, ConversationUpdate,
-                                     MessageFeedback, MessageResponse)
+from ....models.schemas.chat import (
+    ChatRequest,
+    ChatResponse,
+    ConversationCreate,
+    ConversationListResponse,
+    ConversationResponse,
+    ConversationUpdate,
+    MessageFeedback,
+    MessageResponse,
+)
 from ....services.rag_service import get_rag_service
 
 router = APIRouter()
