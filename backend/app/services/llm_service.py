@@ -74,9 +74,7 @@ class OllamaService:
             if stop:
                 payload["options"]["stop"] = stop
 
-            response = await self.client.post(
-                f"{self.base_url}/api/generate", json=payload
-            )
+            response = await self.client.post(f"{self.base_url}/api/generate", json=payload)
             response.raise_for_status()
 
             result = response.json()
@@ -133,9 +131,7 @@ class OllamaService:
             if stop:
                 payload["options"]["stop"] = stop
 
-            async with self.client.stream(
-                "POST", f"{self.base_url}/api/generate", json=payload
-            ) as response:
+            async with self.client.stream("POST", f"{self.base_url}/api/generate", json=payload) as response:
                 response.raise_for_status()
 
                 async for line in response.aiter_lines():
@@ -255,9 +251,7 @@ class OllamaService:
             if stop:
                 payload["options"]["stop"] = stop
 
-            async with self.client.stream(
-                "POST", f"{self.base_url}/api/chat", json=payload
-            ) as response:
+            async with self.client.stream("POST", f"{self.base_url}/api/chat", json=payload) as response:
                 response.raise_for_status()
 
                 async for line in response.aiter_lines():

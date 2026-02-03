@@ -96,14 +96,10 @@ class RAGService:
             logger.info(f"Processing query: {query[:100]}...")
             retrieval_start = time.time()
 
-            retrieved_chunks = await self.retriever.retrieve(
-                query=query, filters=filters
-            )
+            retrieved_chunks = await self.retriever.retrieve(query=query, filters=filters)
 
             retrieval_time = time.time() - retrieval_start
-            logger.info(
-                f"Retrieved {len(retrieved_chunks)} chunks in {retrieval_time:.2f}s"
-            )
+            logger.info(f"Retrieved {len(retrieved_chunks)} chunks in {retrieval_time:.2f}s")
 
             if not retrieved_chunks:
                 return RAGResponse(
@@ -190,14 +186,10 @@ class RAGService:
             logger.info(f"Processing query (streaming): {query[:100]}...")
             retrieval_start = time.time()
 
-            retrieved_chunks = await self.retriever.retrieve(
-                query=query, filters=filters
-            )
+            retrieved_chunks = await self.retriever.retrieve(query=query, filters=filters)
 
             retrieval_time = time.time() - retrieval_start
-            logger.info(
-                f"Retrieved {len(retrieved_chunks)} chunks in {retrieval_time:.2f}s"
-            )
+            logger.info(f"Retrieved {len(retrieved_chunks)} chunks in {retrieval_time:.2f}s")
 
             # Yield retrieval metadata first
             sources = self._extract_sources(retrieved_chunks)

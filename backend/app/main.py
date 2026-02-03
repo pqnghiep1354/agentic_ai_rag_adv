@@ -97,9 +97,7 @@ async def root():
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
     """Handle 404 errors"""
-    return JSONResponse(
-        status_code=status.HTTP_404_NOT_FOUND, content={"detail": "Resource not found"}
-    )
+    return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": "Resource not found"})
 
 
 @app.exception_handler(500)

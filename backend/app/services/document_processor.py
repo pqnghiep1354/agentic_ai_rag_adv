@@ -166,16 +166,12 @@ class DocumentProcessor:
 
             await db.commit()
 
-            logger.info(
-                f"Document {document_id} processed successfully in {processing_time:.2f}s"
-            )
+            logger.info(f"Document {document_id} processed successfully in {processing_time:.2f}s")
 
         except Exception as e:
             # Update document status to FAILED
             error_message = str(e)
-            logger.error(
-                f"Document processing failed for {document_id}: {error_message}"
-            )
+            logger.error(f"Document processing failed for {document_id}: {error_message}")
 
             document.status = DocumentStatus.FAILED
             document.processing_error = error_message

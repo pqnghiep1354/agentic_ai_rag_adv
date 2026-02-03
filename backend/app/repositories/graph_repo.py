@@ -86,9 +86,7 @@ class GraphRepository:
             )
 
     @staticmethod
-    def _create_document_node_tx(
-        tx, document_id: int, filename: str, metadata: Dict[str, Any]
-    ):
+    def _create_document_node_tx(tx, document_id: int, filename: str, metadata: Dict[str, Any]):
         """Transaction function to create document node."""
         query = """
         MERGE (d:Document {document_id: $document_id})
@@ -226,9 +224,7 @@ class GraphRepository:
             )
             count = result.single()["count"]
             if count > 0:
-                logger.debug(
-                    f"Created {count} REFERENCES from {source_chunk_id} for '{ref}'"
-                )
+                logger.debug(f"Created {count} REFERENCES from {source_chunk_id} for '{ref}'")
 
     def create_entity_nodes(
         self,
@@ -323,9 +319,7 @@ class GraphRepository:
         if not chunk_ids:
             return []
 
-        logger.debug(
-            f"Finding related chunks for {len(chunk_ids)} seeds, depth={max_depth}"
-        )
+        logger.debug(f"Finding related chunks for {len(chunk_ids)} seeds, depth={max_depth}")
 
         with self.driver.session() as session:
             result = session.execute_read(

@@ -40,12 +40,8 @@ class PDFParser:
     def __init__(self):
         self.legal_patterns = {
             "law": re.compile(r"^(LUẬT|Luật)\s+[A-ZĐ\s]+", re.IGNORECASE),
-            "decree": re.compile(
-                r"^(NGHỊ ĐỊNH|Nghị định)\s+\d+\/\d+\/[A-Z\-]+", re.IGNORECASE
-            ),
-            "circular": re.compile(
-                r"^(THÔNG TƯ|Thông tư)\s+\d+\/\d+\/[A-Z\-]+", re.IGNORECASE
-            ),
+            "decree": re.compile(r"^(NGHỊ ĐỊNH|Nghị định)\s+\d+\/\d+\/[A-Z\-]+", re.IGNORECASE),
+            "circular": re.compile(r"^(THÔNG TƯ|Thông tư)\s+\d+\/\d+\/[A-Z\-]+", re.IGNORECASE),
             "chapter": re.compile(r"^Chương\s+[IVXLCDM\d]+", re.IGNORECASE),
             "section": re.compile(r"^Mục\s+\d+", re.IGNORECASE),
             "article": re.compile(r"^Điều\s+\d+", re.IGNORECASE),
@@ -91,18 +87,14 @@ class PDFParser:
             if elements:
                 metadata["title"] = elements[0].text[:200]
 
-            logger.info(
-                f"Parsed PDF: {len(elements)} elements, {metadata['page_count']} pages"
-            )
+            logger.info(f"Parsed PDF: {len(elements)} elements, {metadata['page_count']} pages")
             return elements, metadata
 
         except Exception as e:
             logger.error(f"PDF parsing error: {e}")
             raise
 
-    def _classify_element(
-        self, text: str, page_number: int
-    ) -> Optional[DocumentElement]:
+    def _classify_element(self, text: str, page_number: int) -> Optional[DocumentElement]:
         """
         Classify text element by type and level
 
@@ -119,31 +111,17 @@ class PDFParser:
 
         # Check patterns
         if self.legal_patterns["law"].match(text):
-            return DocumentElement(
-                element_type="title", text=text, level=0, page_number=page_number
-            )
-        elif self.legal_patterns["decree"].match(text) or self.legal_patterns[
-            "circular"
-        ].match(text):
-            return DocumentElement(
-                element_type="title", text=text, level=1, page_number=page_number
-            )
+            return DocumentElement(element_type="title", text=text, level=0, page_number=page_number)
+        elif self.legal_patterns["decree"].match(text) or self.legal_patterns["circular"].match(text):
+            return DocumentElement(element_type="title", text=text, level=1, page_number=page_number)
         elif self.legal_patterns["chapter"].match(text):
-            return DocumentElement(
-                element_type="chapter", text=text, level=2, page_number=page_number
-            )
+            return DocumentElement(element_type="chapter", text=text, level=2, page_number=page_number)
         elif self.legal_patterns["section"].match(text):
-            return DocumentElement(
-                element_type="section", text=text, level=3, page_number=page_number
-            )
+            return DocumentElement(element_type="section", text=text, level=3, page_number=page_number)
         elif self.legal_patterns["article"].match(text):
-            return DocumentElement(
-                element_type="article", text=text, level=4, page_number=page_number
-            )
+            return DocumentElement(element_type="article", text=text, level=4, page_number=page_number)
         elif self.legal_patterns["clause"].match(text):
-            return DocumentElement(
-                element_type="clause", text=text, level=5, page_number=page_number
-            )
+            return DocumentElement(element_type="clause", text=text, level=5, page_number=page_number)
         else:
             # Default to paragraph
             level = self._infer_title_level(text)
@@ -167,10 +145,7 @@ class PDFParser:
         text_lower = text.lower().strip()
 
         # Check for common legal document keywords
-        if any(
-            keyword in text_lower
-            for keyword in ["luật", "nghị định", "thông tư", "quyết định"]
-        ):
+        if any(keyword in text_lower for keyword in ["luật", "nghị định", "thông tư", "quyết định"]):
             return 1
         elif text_lower.startswith("chương"):
             return 2

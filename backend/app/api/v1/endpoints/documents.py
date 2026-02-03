@@ -75,9 +75,7 @@ async def save_upload_file(file: UploadFile, destination: str) -> None:
         shutil.copyfileobj(file.file, buffer)
 
 
-@router.post(
-    "/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     file: UploadFile = File(...),
     background_tasks: BackgroundTasks = BackgroundTasks(),
@@ -327,9 +325,7 @@ async def reprocess_document(
             try:
                 await processor.reprocess_document(doc_id, session)
             except Exception as e:
-                logger.error(
-                    f"Background reprocessing failed for document {doc_id}: {e}"
-                )
+                logger.error(f"Background reprocessing failed for document {doc_id}: {e}")
 
     background_tasks.add_task(reprocess_document_task, document.id)
 

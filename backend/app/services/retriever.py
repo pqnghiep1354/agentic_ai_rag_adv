@@ -114,9 +114,7 @@ class HybridRetriever:
             if enable_graph and vector_results:
                 logger.info("Starting graph traversal")
                 graph_results = await self._graph_traverse(vector_results)
-                logger.info(
-                    f"Graph traversal returned {len(graph_results)} additional chunks"
-                )
+                logger.info(f"Graph traversal returned {len(graph_results)} additional chunks")
             else:
                 graph_results = []
 
@@ -150,9 +148,7 @@ class HybridRetriever:
             query_embedding = self.embedding_service.encode_query(query)
 
             # Search Qdrant
-            results = self.vector_repo.search(
-                query_vector=query_embedding.tolist(), limit=limit, filters=filters
-            )
+            results = self.vector_repo.search(query_vector=query_embedding.tolist(), limit=limit, filters=filters)
 
             # Convert to RetrievedChunk objects
             chunks = []
@@ -182,9 +178,7 @@ class HybridRetriever:
             logger.error(f"Vector search error: {e}")
             raise
 
-    async def _graph_traverse(
-        self, seed_chunks: List[RetrievedChunk]
-    ) -> List[RetrievedChunk]:
+    async def _graph_traverse(self, seed_chunks: List[RetrievedChunk]) -> List[RetrievedChunk]:
         """
         Traverse knowledge graph from seed chunks
 
@@ -267,10 +261,7 @@ class HybridRetriever:
 
             # Compute final scores using weighted fusion
             for chunk in chunk_map.values():
-                chunk.final_score = (
-                    self.vector_weight * chunk.vector_score
-                    + self.graph_weight * chunk.graph_score
-                )
+                chunk.final_score = self.vector_weight * chunk.vector_score + self.graph_weight * chunk.graph_score
 
             # Sort by final score
             all_chunks = list(chunk_map.values())

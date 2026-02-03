@@ -80,9 +80,7 @@ def setup_logging():
         console_handler.setFormatter(JSONFormatter())
     else:
         # Use simple format in debug
-        console_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        )
+        console_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 
     logger.addHandler(console_handler)
 
@@ -119,9 +117,7 @@ def log_with_context(logger: logging.Logger, level: str, message: str, **kwargs)
 # Prometheus Metrics
 if settings.ENABLE_METRICS:
     # Request metrics
-    REQUEST_COUNT = Counter(
-        "http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"]
-    )
+    REQUEST_COUNT = Counter("http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"])
 
     REQUEST_DURATION = Histogram(
         "http_request_duration_seconds",
@@ -151,9 +147,7 @@ if settings.ENABLE_METRICS:
     )
 
     # Document metrics
-    DOCUMENT_UPLOAD_COUNT = Counter(
-        "documents_uploaded_total", "Total documents uploaded", ["file_type", "status"]
-    )
+    DOCUMENT_UPLOAD_COUNT = Counter("documents_uploaded_total", "Total documents uploaded", ["file_type", "status"])
 
     DOCUMENT_PROCESSING_DURATION = Histogram(
         "document_processing_duration_seconds",
@@ -168,9 +162,7 @@ if settings.ENABLE_METRICS:
     )
 
     # System metrics
-    ACTIVE_CONNECTIONS = Gauge(
-        "active_websocket_connections", "Number of active WebSocket connections"
-    )
+    ACTIVE_CONNECTIONS = Gauge("active_websocket_connections", "Number of active WebSocket connections")
 
 
 class MetricsMiddleware(BaseHTTPMiddleware):
@@ -212,9 +204,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             status=response.status_code,
         ).inc()
 
-        REQUEST_DURATION.labels(
-            method=request.method, endpoint=request.url.path
-        ).observe(duration)
+        REQUEST_DURATION.labels(method=request.method, endpoint=request.url.path).observe(duration)
 
         return response
 

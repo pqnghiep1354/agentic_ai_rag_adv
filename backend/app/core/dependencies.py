@@ -64,9 +64,7 @@ async def get_neo4j():
     Returns:
         Neo4j driver instance
     """
-    driver = AsyncGraphDatabase.driver(
-        settings.NEO4J_URI, auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
-    )
+    driver = AsyncGraphDatabase.driver(settings.NEO4J_URI, auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD))
     try:
         yield driver
     finally:
@@ -113,9 +111,7 @@ async def get_current_user(
 
 # Optional current user (for endpoints that work with or without auth)
 async def get_current_user_optional(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
-        HTTPBearer(auto_error=False)
-    ),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
 ) -> Optional[dict]:
     """
     Get current user if authenticated, None otherwise

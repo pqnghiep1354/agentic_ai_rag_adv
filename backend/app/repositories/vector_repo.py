@@ -75,9 +75,7 @@ class VectorRepository:
         try:
             # Check if collection exists
             collections = self.client.get_collections().collections
-            collection_exists = any(
-                col.name == self.collection_name for col in collections
-            )
+            collection_exists = any(col.name == self.collection_name for col in collections)
 
             if collection_exists:
                 if recreate:
@@ -88,9 +86,7 @@ class VectorRepository:
                     return
 
             # Create collection
-            logger.info(
-                f"Creating collection: {self.collection_name} with dimension {vector_size}"
-            )
+            logger.info(f"Creating collection: {self.collection_name} with dimension {vector_size}")
 
             self.client.create_collection(
                 collection_name=self.collection_name,
@@ -134,24 +130,16 @@ class VectorRepository:
             batch_size: Batch size for uploading
         """
         if len(chunks) != len(embeddings):
-            raise ValueError(
-                f"Chunks and embeddings length mismatch: {len(chunks)} vs {len(embeddings)}"
-            )
+            raise ValueError(f"Chunks and embeddings length mismatch: {len(chunks)} vs {len(embeddings)}")
 
-        logger.info(
-            f"Indexing {len(chunks)} chunks in collection {self.collection_name}"
-        )
+        logger.info(f"Indexing {len(chunks)} chunks in collection {self.collection_name}")
 
         points = []
         for chunk, embedding in zip(chunks, embeddings):
             # Create point
             point = PointStruct(
                 id=str(uuid.uuid4()),  # Generate UUID for each point
-                vector=(
-                    embedding.tolist()
-                    if isinstance(embedding, np.ndarray)
-                    else embedding
-                ),
+                vector=(embedding.tolist() if isinstance(embedding, np.ndarray) else embedding),
                 payload={
                     "chunk_id": chunk.chunk_id,
                     "document_id": chunk.document_id,
@@ -173,9 +161,7 @@ class VectorRepository:
                     collection_name=self.collection_name,
                     points=batch,
                 )
-                logger.debug(
-                    f"Uploaded batch {i // batch_size + 1}/{(len(points) - 1) // batch_size + 1}"
-                )
+                logger.debug(f"Uploaded batch {i // batch_size + 1}/{(len(points) - 1) // batch_size + 1}")
             except Exception as e:
                 logger.error(f"Failed to upload batch: {e}")
                 raise
