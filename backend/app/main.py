@@ -1,19 +1,22 @@
 """
 Main FastAPI application
 """
-from fastapi import FastAPI, status, WebSocket, Query
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Query, WebSocket, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-import logging
 
+from app.api.v1.router import api_router
+from app.api.websockets.chat_ws import handle_chat_websocket
 from app.core.config import settings
-
 
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -49,7 +52,7 @@ app = FastAPI(
     description="Agentic AI system with GraphRAG for Vietnamese Environmental Law Q&A",
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 
@@ -72,7 +75,7 @@ async def health_check():
     return {
         "status": "healthy",
         "app_name": settings.APP_NAME,
-        "version": settings.APP_VERSION
+        "version": settings.APP_VERSION,
     }
 
 
@@ -86,7 +89,7 @@ async def root():
         "app_name": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "docs_url": "/docs" if settings.DEBUG else "disabled",
-        "health_check": "/health"
+        "health_check": "/health",
     }
 
 
@@ -95,8 +98,7 @@ async def root():
 async def not_found_handler(request, exc):
     """Handle 404 errors"""
     return JSONResponse(
-        status_code=status.HTTP_404_NOT_FOUND,
-        content={"detail": "Resource not found"}
+        status_code=status.HTTP_404_NOT_FOUND, content={"detail": "Resource not found"}
     )
 
 
@@ -106,24 +108,19 @@ async def internal_error_handler(request, exc):
     logger.error(f"Internal server error: {exc}")
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Internal server error"}
+        content={"detail": "Internal server error"},
     )
 
 
 # Include API routers
-from app.api.v1.router import api_router
 app.include_router(api_router, prefix="/api/v1")
 
 
 # WebSocket endpoint for chat streaming
-from app.api.websockets.chat_ws import handle_chat_websocket
 
 
 @app.websocket("/ws/chat")
-async def websocket_chat_endpoint(
-    websocket: WebSocket,
-    token: str = Query(...)
-):
+async def websocket_chat_endpoint(websocket: WebSocket, token: str = Query(...)):
     """
     WebSocket endpoint for real-time chat streaming
 
@@ -135,10 +132,11 @@ async def websocket_chat_endpoint(
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=8000,
         reload=settings.DEBUG,
-        log_level=settings.LOG_LEVEL.lower()
+        log_level=settings.LOG_LEVEL.lower(),
     )

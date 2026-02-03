@@ -4,21 +4,14 @@ Handles vector storage, search, and hybrid retrieval.
 """
 
 import logging
-from typing import List, Dict, Any, Optional, Tuple
 import uuid
+from typing import Any, Dict, List, Optional
 
-from qdrant_client import QdrantClient
-from qdrant_client.models import (
-    Distance,
-    VectorParams,
-    PointStruct,
-    Filter,
-    FieldCondition,
-    MatchValue,
-    SearchRequest,
-)
-from qdrant_client.http import models
 import numpy as np
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
+from qdrant_client.models import (Distance, FieldCondition, Filter, MatchValue,
+                                  PointStruct, VectorParams)
 
 from app.core.config import settings
 from app.utils.chunking import Chunk
@@ -76,7 +69,9 @@ class VectorRepository:
         try:
             # Check if collection exists
             collections = self.client.get_collections().collections
-            collection_exists = any(col.name == self.collection_name for col in collections)
+            collection_exists = any(
+                col.name == self.collection_name for col in collections
+            )
 
             if collection_exists:
                 if recreate:
@@ -87,7 +82,9 @@ class VectorRepository:
                     return
 
             # Create collection
-            logger.info(f"Creating collection: {self.collection_name} with dimension {vector_size}")
+            logger.info(
+                f"Creating collection: {self.collection_name} with dimension {vector_size}"
+            )
 
             self.client.create_collection(
                 collection_name=self.collection_name,
@@ -131,16 +128,24 @@ class VectorRepository:
             batch_size: Batch size for uploading
         """
         if len(chunks) != len(embeddings):
-            raise ValueError(f"Chunks and embeddings length mismatch: {len(chunks)} vs {len(embeddings)}")
+            raise ValueError(
+                f"Chunks and embeddings length mismatch: {len(chunks)} vs {len(embeddings)}"
+            )
 
-        logger.info(f"Indexing {len(chunks)} chunks in collection {self.collection_name}")
+        logger.info(
+            f"Indexing {len(chunks)} chunks in collection {self.collection_name}"
+        )
 
         points = []
         for chunk, embedding in zip(chunks, embeddings):
             # Create point
             point = PointStruct(
                 id=str(uuid.uuid4()),  # Generate UUID for each point
-                vector=embedding.tolist() if isinstance(embedding, np.ndarray) else embedding,
+                vector=(
+                    embedding.tolist()
+                    if isinstance(embedding, np.ndarray)
+                    else embedding
+                ),
                 payload={
                     "chunk_id": chunk.chunk_id,
                     "document_id": chunk.document_id,
@@ -162,7 +167,9 @@ class VectorRepository:
                     collection_name=self.collection_name,
                     points=batch,
                 )
-                logger.debug(f"Uploaded batch {i // batch_size + 1}/{(len(points) - 1) // batch_size + 1}")
+                logger.debug(
+                    f"Uploaded batch {i // batch_size + 1}/{(len(points) - 1) // batch_size + 1}"
+                )
             except Exception as e:
                 logger.error(f"Failed to upload batch: {e}")
                 raise
@@ -220,21 +227,31 @@ class VectorRepository:
             # Format results
             formatted_results = []
             for result in results:
-                formatted_results.append({
-                    "id": result.id,
-                    "score": result.score,
-                    "chunk_id": result.payload.get("chunk_id"),
-                    "document_id": result.payload.get("document_id"),
-                    "text": result.payload.get("text"),
-                    "page_number": result.payload.get("page_number"),
-                    "hierarchy_level": result.payload.get("hierarchy_level"),
-                    "hierarchy_path": result.payload.get("hierarchy_path"),
-                    "metadata": {
-                        k: v
-                        for k, v in result.payload.items()
-                        if k not in ["chunk_id", "document_id", "text", "page_number", "hierarchy_level", "hierarchy_path"]
-                    },
-                })
+                formatted_results.append(
+                    {
+                        "id": result.id,
+                        "score": result.score,
+                        "chunk_id": result.payload.get("chunk_id"),
+                        "document_id": result.payload.get("document_id"),
+                        "text": result.payload.get("text"),
+                        "page_number": result.payload.get("page_number"),
+                        "hierarchy_level": result.payload.get("hierarchy_level"),
+                        "hierarchy_path": result.payload.get("hierarchy_path"),
+                        "metadata": {
+                            k: v
+                            for k, v in result.payload.items()
+                            if k
+                            not in [
+                                "chunk_id",
+                                "document_id",
+                                "text",
+                                "page_number",
+                                "hierarchy_level",
+                                "hierarchy_path",
+                            ]
+                        },
+                    }
+                )
 
             logger.debug(f"Found {len(formatted_results)} results")
             return formatted_results

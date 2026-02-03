@@ -1,9 +1,12 @@
 """
 Ollama LLM service for text generation with streaming support
 """
-import httpx
+
 import logging
-from typing import AsyncGenerator, Dict, Any, Optional, List
+from typing import AsyncGenerator, Dict, List, Optional
+
+import httpx
+
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -15,12 +18,7 @@ class OllamaService:
     Supports streaming and non-streaming generation
     """
 
-    def __init__(
-        self,
-        base_url: str = None,
-        model: str = None,
-        timeout: float = 300.0
-    ):
+    def __init__(self, base_url: str = None, model: str = None, timeout: float = 300.0):
         self.base_url = base_url or settings.OLLAMA_BASE_URL
         self.model = model or settings.OLLAMA_MODEL
         self.timeout = timeout
@@ -40,7 +38,7 @@ class OllamaService:
         max_tokens: int = 2048,
         top_p: float = 0.9,
         stop: Optional[List[str]] = None,
-        **kwargs
+        **kwargs,
     ) -> str:
         """
         Generate text using Ollama (non-streaming)
@@ -66,8 +64,8 @@ class OllamaService:
                     "temperature": temperature,
                     "num_predict": max_tokens,
                     "top_p": top_p,
-                    **kwargs
-                }
+                    **kwargs,
+                },
             }
 
             if system:
@@ -77,8 +75,7 @@ class OllamaService:
                 payload["options"]["stop"] = stop
 
             response = await self.client.post(
-                f"{self.base_url}/api/generate",
-                json=payload
+                f"{self.base_url}/api/generate", json=payload
             )
             response.raise_for_status()
 
@@ -100,7 +97,7 @@ class OllamaService:
         max_tokens: int = 2048,
         top_p: float = 0.9,
         stop: Optional[List[str]] = None,
-        **kwargs
+        **kwargs,
     ) -> AsyncGenerator[str, None]:
         """
         Generate text using Ollama with streaming
@@ -126,8 +123,8 @@ class OllamaService:
                     "temperature": temperature,
                     "num_predict": max_tokens,
                     "top_p": top_p,
-                    **kwargs
-                }
+                    **kwargs,
+                },
             }
 
             if system:
@@ -137,9 +134,7 @@ class OllamaService:
                 payload["options"]["stop"] = stop
 
             async with self.client.stream(
-                "POST",
-                f"{self.base_url}/api/generate",
-                json=payload
+                "POST", f"{self.base_url}/api/generate", json=payload
             ) as response:
                 response.raise_for_status()
 
@@ -147,6 +142,7 @@ class OllamaService:
                     if line.strip():
                         try:
                             import json
+
                             chunk = json.loads(line)
 
                             if chunk.get("response"):
@@ -174,7 +170,7 @@ class OllamaService:
         max_tokens: int = 2048,
         top_p: float = 0.9,
         stop: Optional[List[str]] = None,
-        **kwargs
+        **kwargs,
     ) -> str:
         """
         Chat completion using Ollama (non-streaming)
@@ -199,17 +195,14 @@ class OllamaService:
                     "temperature": temperature,
                     "num_predict": max_tokens,
                     "top_p": top_p,
-                    **kwargs
-                }
+                    **kwargs,
+                },
             }
 
             if stop:
                 payload["options"]["stop"] = stop
 
-            response = await self.client.post(
-                f"{self.base_url}/api/chat",
-                json=payload
-            )
+            response = await self.client.post(f"{self.base_url}/api/chat", json=payload)
             response.raise_for_status()
 
             result = response.json()
@@ -230,7 +223,7 @@ class OllamaService:
         max_tokens: int = 2048,
         top_p: float = 0.9,
         stop: Optional[List[str]] = None,
-        **kwargs
+        **kwargs,
     ) -> AsyncGenerator[str, None]:
         """
         Chat completion using Ollama with streaming
@@ -255,17 +248,15 @@ class OllamaService:
                     "temperature": temperature,
                     "num_predict": max_tokens,
                     "top_p": top_p,
-                    **kwargs
-                }
+                    **kwargs,
+                },
             }
 
             if stop:
                 payload["options"]["stop"] = stop
 
             async with self.client.stream(
-                "POST",
-                f"{self.base_url}/api/chat",
-                json=payload
+                "POST", f"{self.base_url}/api/chat", json=payload
             ) as response:
                 response.raise_for_status()
 
@@ -273,6 +264,7 @@ class OllamaService:
                     if line.strip():
                         try:
                             import json
+
                             chunk = json.loads(line)
 
                             message = chunk.get("message", {})
@@ -327,7 +319,7 @@ class OllamaService:
             response = await self.client.post(
                 f"{self.base_url}/api/pull",
                 json={"name": model_name, "stream": False},
-                timeout=600.0  # 10 minutes for model download
+                timeout=600.0,  # 10 minutes for model download
             )
             response.raise_for_status()
 

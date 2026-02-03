@@ -1,19 +1,21 @@
 """
 WebSocket endpoint for real-time chat streaming
 """
+
 import json
 import logging
-from fastapi import WebSocket, WebSocketDisconnect, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from datetime import datetime
 from typing import Optional
 
+from fastapi import WebSocket, WebSocketDisconnect, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from ...core.database import get_db
-from ...models.domain.user import User
-from ...models.domain.conversation import Conversation, Message
-from ...services.rag_service import get_rag_service
 from ...core.security import decode_token
+from ...models.domain.conversation import Conversation, Message
+from ...models.domain.user import User
+from ...services.rag_service import get_rag_service
 
 logger = logging.getLogger(__name__)
 rag_service = get_rag_service()
@@ -56,8 +58,7 @@ manager = ConnectionManager()
 
 
 async def get_current_user_ws(
-    websocket: WebSocket,
-    token: Optional[str] = None
+    websocket: WebSocket, token: Optional[str] = None
 ) -> Optional[User]:
     """
     Get current user from WebSocket token
@@ -137,34 +138,32 @@ async def handle_chat_websocket(websocket: WebSocket, token: str):
             elif message_type == "ping":
                 await websocket.send_json({"type": "pong"})
             else:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": f"Unknown message type: {message_type}"
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": f"Unknown message type: {message_type}",
+                    }
+                )
 
     except WebSocketDisconnect:
         manager.disconnect(user.id)
         logger.info(f"User {user.id} disconnected")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
-        await websocket.send_json({
-            "type": "error",
-            "message": f"Server error: {str(e)}"
-        })
+        await websocket.send_json(
+            {"type": "error", "message": f"Server error: {str(e)}"}
+        )
         manager.disconnect(user.id)
     finally:
         # Close database session
         try:
             await db.close()
-        except:
+        except Exception:
             pass
 
 
 async def handle_chat_message(
-    websocket: WebSocket,
-    request: dict,
-    user: User,
-    db: AsyncSession
+    websocket: WebSocket, request: dict, user: User, db: AsyncSession
 ):
     """
     Handle chat message and stream response
@@ -182,35 +181,28 @@ async def handle_chat_message(
         max_tokens = request.get("max_tokens", 2048)
 
         if not message_text:
-            await websocket.send_json({
-                "type": "error",
-                "message": "Message cannot be empty"
-            })
+            await websocket.send_json(
+                {"type": "error", "message": "Message cannot be empty"}
+            )
             return
 
         # Get or create conversation
         if conversation_id:
             result = await db.execute(
-                select(Conversation)
-                .where(
-                    Conversation.id == conversation_id,
-                    Conversation.user_id == user.id
+                select(Conversation).where(
+                    Conversation.id == conversation_id, Conversation.user_id == user.id
                 )
             )
             conversation = result.scalar_one_or_none()
 
             if not conversation:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": "Conversation not found"
-                })
+                await websocket.send_json(
+                    {"type": "error", "message": "Conversation not found"}
+                )
                 return
         else:
             # Create new conversation
-            conversation = Conversation(
-                title=message_text[:100],
-                user_id=user.id
-            )
+            conversation = Conversation(title=message_text[:100], user_id=user.id)
             db.add(conversation)
             await db.flush()
 
@@ -224,15 +216,12 @@ async def handle_chat_message(
         history_messages = result.scalars().all()
 
         conversation_history = [
-            {"role": msg.role, "content": msg.content}
-            for msg in history_messages
+            {"role": msg.role, "content": msg.content} for msg in history_messages
         ]
 
         # Create user message
         user_message = Message(
-            conversation_id=conversation.id,
-            role="user",
-            content=message_text
+            conversation_id=conversation.id, role="user", content=message_text
         )
         db.add(user_message)
         await db.flush()
@@ -250,7 +239,7 @@ async def handle_chat_message(
             query=message_text,
             conversation_history=conversation_history,
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
         ):
             chunk_type = chunk.get("type")
 
@@ -260,23 +249,22 @@ async def handle_chat_message(
                 retrieved_count = chunk.get("retrieved_count", 0)
                 retrieval_time = chunk.get("retrieval_time", 0.0)
 
-                await websocket.send_json({
-                    "type": "metadata",
-                    "sources": sources,
-                    "retrieved_count": retrieved_count,
-                    "retrieval_time": retrieval_time,
-                    "conversation_id": conversation.id
-                })
+                await websocket.send_json(
+                    {
+                        "type": "metadata",
+                        "sources": sources,
+                        "retrieved_count": retrieved_count,
+                        "retrieval_time": retrieval_time,
+                        "conversation_id": conversation.id,
+                    }
+                )
 
             elif chunk_type == "text":
                 # Stream text chunks
                 content = chunk.get("content", "")
                 full_response += content
 
-                await websocket.send_json({
-                    "type": "text",
-                    "content": content
-                })
+                await websocket.send_json({"type": "text", "content": content})
 
             elif chunk_type == "done":
                 # Final metadata
@@ -291,7 +279,7 @@ async def handle_chat_message(
                     content=full_response.strip(),
                     sources=sources,
                     processing_time=total_time,
-                    tokens_used=tokens_used
+                    tokens_used=tokens_used,
                 )
                 db.add(assistant_message)
 
@@ -303,27 +291,27 @@ async def handle_chat_message(
                 await db.refresh(assistant_message)
 
                 # Send done message
-                await websocket.send_json({
-                    "type": "done",
-                    "message_id": assistant_message.id,
-                    "generation_time": generation_time,
-                    "total_time": total_time,
-                    "tokens_used": tokens_used
-                })
+                await websocket.send_json(
+                    {
+                        "type": "done",
+                        "message_id": assistant_message.id,
+                        "generation_time": generation_time,
+                        "total_time": total_time,
+                        "tokens_used": tokens_used,
+                    }
+                )
 
             elif chunk_type == "error":
                 # Error occurred
-                await websocket.send_json({
-                    "type": "error",
-                    "message": chunk.get("message", "Unknown error")
-                })
+                await websocket.send_json(
+                    {"type": "error", "message": chunk.get("message", "Unknown error")}
+                )
                 await db.rollback()
                 return
 
     except Exception as e:
         logger.error(f"Chat message handling error: {e}")
-        await websocket.send_json({
-            "type": "error",
-            "message": f"Failed to process message: {str(e)}"
-        })
+        await websocket.send_json(
+            {"type": "error", "message": f"Failed to process message: {str(e)}"}
+        )
         await db.rollback()

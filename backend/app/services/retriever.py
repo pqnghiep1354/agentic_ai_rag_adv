@@ -1,12 +1,14 @@
 """
 Hybrid retriever combining vector search and graph traversal
 """
+
 import logging
-from typing import List, Dict, Any, Optional
-from ..repositories.vector_repo import VectorRepository
-from ..repositories.graph_repo import GraphRepository
-from ..utils.embeddings import EmbeddingService
+from typing import Any, Dict, List, Optional
+
 from ..core.config import settings
+from ..repositories.graph_repo import GraphRepository
+from ..repositories.vector_repo import VectorRepository
+from ..utils.embeddings import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ class RetrievedChunk:
         vector_score: float = 0.0,
         graph_score: float = 0.0,
         final_score: float = 0.0,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         self.chunk_id = chunk_id
         self.document_id = document_id
@@ -46,7 +48,7 @@ class RetrievedChunk:
             "vector_score": self.vector_score,
             "graph_score": self.graph_score,
             "final_score": self.final_score,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
 
@@ -66,7 +68,7 @@ class HybridRetriever:
         top_k: int = None,
         graph_depth: int = None,
         vector_weight: float = 0.6,
-        graph_weight: float = 0.4
+        graph_weight: float = 0.4,
     ):
         self.vector_repo = vector_repo
         self.graph_repo = graph_repo
@@ -81,7 +83,7 @@ class HybridRetriever:
         query: str,
         top_k: Optional[int] = None,
         filters: Optional[Dict[str, Any]] = None,
-        enable_graph: bool = True
+        enable_graph: bool = True,
     ) -> List[RetrievedChunk]:
         """
         Retrieve relevant chunks using hybrid approach
@@ -112,17 +114,15 @@ class HybridRetriever:
             if enable_graph and vector_results:
                 logger.info("Starting graph traversal")
                 graph_results = await self._graph_traverse(vector_results)
-                logger.info(f"Graph traversal returned {len(graph_results)} additional chunks")
+                logger.info(
+                    f"Graph traversal returned {len(graph_results)} additional chunks"
+                )
             else:
                 graph_results = []
 
             # Step 3: Merge and re-rank
             logger.info("Merging and re-ranking results")
-            final_results = self._merge_and_rerank(
-                vector_results,
-                graph_results,
-                k
-            )
+            final_results = self._merge_and_rerank(vector_results, graph_results, k)
 
             logger.info(f"Final retrieval: {len(final_results)} chunks")
             return final_results
@@ -132,10 +132,7 @@ class HybridRetriever:
             raise
 
     async def _vector_search(
-        self,
-        query: str,
-        limit: int,
-        filters: Optional[Dict[str, Any]] = None
+        self, query: str, limit: int, filters: Optional[Dict[str, Any]] = None
     ) -> List[RetrievedChunk]:
         """
         Perform vector search using Qdrant
@@ -154,30 +151,30 @@ class HybridRetriever:
 
             # Search Qdrant
             results = self.vector_repo.search(
-                query_vector=query_embedding.tolist(),
-                limit=limit,
-                filters=filters
+                query_vector=query_embedding.tolist(), limit=limit, filters=filters
             )
 
             # Convert to RetrievedChunk objects
             chunks = []
             for result in results:
                 payload = result.payload
-                chunks.append(RetrievedChunk(
-                    chunk_id=payload.get("chunk_id"),
-                    document_id=payload.get("document_id"),
-                    text=payload.get("text"),
-                    hierarchy_path=payload.get("hierarchy_path", ""),
-                    vector_score=result.score,
-                    graph_score=0.0,
-                    final_score=result.score,
-                    metadata={
-                        "page_number": payload.get("page_number"),
-                        "section_title": payload.get("section_title"),
-                        "article_number": payload.get("article_number"),
-                        "document_title": payload.get("document_title")
-                    }
-                ))
+                chunks.append(
+                    RetrievedChunk(
+                        chunk_id=payload.get("chunk_id"),
+                        document_id=payload.get("document_id"),
+                        text=payload.get("text"),
+                        hierarchy_path=payload.get("hierarchy_path", ""),
+                        vector_score=result.score,
+                        graph_score=0.0,
+                        final_score=result.score,
+                        metadata={
+                            "page_number": payload.get("page_number"),
+                            "section_title": payload.get("section_title"),
+                            "article_number": payload.get("article_number"),
+                            "document_title": payload.get("document_title"),
+                        },
+                    )
+                )
 
             return chunks
 
@@ -186,8 +183,7 @@ class HybridRetriever:
             raise
 
     async def _graph_traverse(
-        self,
-        seed_chunks: List[RetrievedChunk]
+        self, seed_chunks: List[RetrievedChunk]
     ) -> List[RetrievedChunk]:
         """
         Traverse knowledge graph from seed chunks
@@ -204,29 +200,29 @@ class HybridRetriever:
 
             # Find related chunks via graph traversal
             related = self.graph_repo.find_related_chunks(
-                chunk_ids=seed_ids,
-                max_depth=self.graph_depth,
-                max_results=50
+                chunk_ids=seed_ids, max_depth=self.graph_depth, max_results=50
             )
 
             # Convert to RetrievedChunk objects
             chunks = []
             for item in related:
-                chunks.append(RetrievedChunk(
-                    chunk_id=item.get("chunk_id"),
-                    document_id=item.get("document_id"),
-                    text=item.get("text"),
-                    hierarchy_path=item.get("hierarchy_path", ""),
-                    vector_score=0.0,
-                    graph_score=item.get("path_score", 0.0),
-                    final_score=item.get("path_score", 0.0),
-                    metadata={
-                        "page_number": item.get("page_number"),
-                        "section_title": item.get("section_title"),
-                        "article_number": item.get("article_number"),
-                        "relationship_type": item.get("relationship_type")
-                    }
-                ))
+                chunks.append(
+                    RetrievedChunk(
+                        chunk_id=item.get("chunk_id"),
+                        document_id=item.get("document_id"),
+                        text=item.get("text"),
+                        hierarchy_path=item.get("hierarchy_path", ""),
+                        vector_score=0.0,
+                        graph_score=item.get("path_score", 0.0),
+                        final_score=item.get("path_score", 0.0),
+                        metadata={
+                            "page_number": item.get("page_number"),
+                            "section_title": item.get("section_title"),
+                            "article_number": item.get("article_number"),
+                            "relationship_type": item.get("relationship_type"),
+                        },
+                    )
+                )
 
             return chunks
 
@@ -238,7 +234,7 @@ class HybridRetriever:
         self,
         vector_results: List[RetrievedChunk],
         graph_results: List[RetrievedChunk],
-        top_k: int
+        top_k: int,
     ) -> List[RetrievedChunk]:
         """
         Merge vector and graph results, re-rank, and return top-k
@@ -272,8 +268,8 @@ class HybridRetriever:
             # Compute final scores using weighted fusion
             for chunk in chunk_map.values():
                 chunk.final_score = (
-                    self.vector_weight * chunk.vector_score +
-                    self.graph_weight * chunk.graph_score
+                    self.vector_weight * chunk.vector_score
+                    + self.graph_weight * chunk.graph_score
                 )
 
             # Sort by final score
@@ -293,7 +289,7 @@ class HybridRetriever:
         self,
         chunks: List[RetrievedChunk],
         top_k: int,
-        similarity_threshold: float = 0.95
+        similarity_threshold: float = 0.95,
     ) -> List[RetrievedChunk]:
         """
         Enforce diversity in results by removing near-duplicates
@@ -373,13 +369,13 @@ def get_retriever() -> HybridRetriever:
     """
     global _retriever
     if _retriever is None:
-        from ..repositories.vector_repo import get_vector_repository
         from ..repositories.graph_repo import get_graph_repository
+        from ..repositories.vector_repo import get_vector_repository
         from ..utils.embeddings import get_embedding_service
 
         _retriever = HybridRetriever(
             vector_repo=get_vector_repository(),
             graph_repo=get_graph_repository(),
-            embedding_service=get_embedding_service()
+            embedding_service=get_embedding_service(),
         )
     return _retriever

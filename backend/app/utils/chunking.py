@@ -4,9 +4,9 @@ Preserves document structure and legal boundaries (clauses, articles, sections).
 """
 
 import logging
-from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 from app.utils.document_parser import DocumentElement
 
@@ -142,7 +142,10 @@ class HierarchicalChunker:
     def _update_hierarchy_stack(self, element: DocumentElement) -> None:
         """Update the hierarchy stack based on current element."""
         # Pop elements from stack that are at same or lower level
-        while self.hierarchy_stack and self.hierarchy_stack[-1].hierarchy_level >= element.hierarchy_level:
+        while (
+            self.hierarchy_stack
+            and self.hierarchy_stack[-1].hierarchy_level >= element.hierarchy_level
+        ):
             self.hierarchy_stack.pop()
 
         # Add current element if it's a title/heading
@@ -209,7 +212,10 @@ class HierarchicalChunker:
         for word in words:
             word_length = len(word) + 1  # +1 for space
 
-            if current_length + word_length > self.chunk_size and len(current_chunk_words) > 0:
+            if (
+                current_length + word_length > self.chunk_size
+                and len(current_chunk_words) > 0
+            ):
                 # Create chunk
                 chunk_text = " ".join(current_chunk_words)
 

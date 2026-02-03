@@ -1,24 +1,29 @@
 """
 Conversation and Message Pydantic schemas
 """
+
 from datetime import datetime
-from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # Message schemas
 class MessageBase(BaseModel):
     """Base message schema"""
+
     content: str
 
 
 class MessageCreate(MessageBase):
     """Schema for creating a message"""
+
     role: str = Field(..., pattern="^(user|assistant|system)$")
 
 
 class MessageInDB(MessageBase):
     """Schema for message in database"""
+
     id: int
     conversation_id: int
     role: str
@@ -36,11 +41,13 @@ class MessageInDB(MessageBase):
 
 class Message(MessageInDB):
     """Schema for message response"""
+
     pass
 
 
 class MessageFeedback(BaseModel):
     """Schema for message feedback"""
+
     rating: int = Field(..., ge=1, le=5)
     comment: Optional[str] = None
 
@@ -48,22 +55,26 @@ class MessageFeedback(BaseModel):
 # Conversation schemas
 class ConversationBase(BaseModel):
     """Base conversation schema"""
+
     title: str = Field(..., max_length=500)
 
 
 class ConversationCreate(ConversationBase):
     """Schema for creating a conversation"""
+
     pass
 
 
 class ConversationUpdate(BaseModel):
     """Schema for updating conversation"""
+
     title: Optional[str] = Field(None, max_length=500)
     is_archived: Optional[bool] = None
 
 
 class ConversationInDB(ConversationBase):
     """Schema for conversation in database"""
+
     id: int
     user_id: int
     is_archived: bool
@@ -77,11 +88,13 @@ class ConversationInDB(ConversationBase):
 
 class Conversation(ConversationInDB):
     """Schema for conversation response"""
+
     messages: Optional[List[Message]] = None
 
 
 class ConversationList(BaseModel):
     """Schema for paginated conversation list"""
+
     items: List[Conversation]
     total: int
     page: int
@@ -92,12 +105,14 @@ class ConversationList(BaseModel):
 # Chat schemas
 class ChatRequest(BaseModel):
     """Schema for chat request"""
+
     message: str = Field(..., min_length=1, max_length=5000)
     conversation_id: Optional[int] = None
 
 
 class ChatResponse(BaseModel):
     """Schema for chat response"""
+
     message: Message
     conversation_id: int
     sources: Optional[List[dict]] = None

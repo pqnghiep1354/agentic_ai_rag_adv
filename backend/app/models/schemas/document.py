@@ -1,9 +1,11 @@
 """
 Document Pydantic schemas for API validation
 """
+
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.domain.document import DocumentStatus
 
@@ -11,16 +13,19 @@ from app.models.domain.document import DocumentStatus
 # Base schemas
 class DocumentBase(BaseModel):
     """Base document schema"""
+
     title: str = Field(..., max_length=500)
 
 
 class DocumentCreate(DocumentBase):
     """Schema for creating a document (from upload)"""
+
     pass
 
 
 class DocumentUpdate(BaseModel):
     """Schema for updating document metadata"""
+
     title: Optional[str] = Field(None, max_length=500)
     issuing_authority: Optional[str] = Field(None, max_length=500)
     issue_date: Optional[datetime] = None
@@ -29,6 +34,7 @@ class DocumentUpdate(BaseModel):
 
 class DocumentInDB(DocumentBase):
     """Schema for document in database"""
+
     id: int
     filename: str
     file_path: str
@@ -52,11 +58,13 @@ class DocumentInDB(DocumentBase):
 
 class DocumentResponse(DocumentInDB):
     """Schema for document response"""
+
     pass
 
 
 class DocumentListResponse(BaseModel):
     """Schema for paginated document list"""
+
     documents: list[DocumentResponse]
     total: int
     skip: int
@@ -65,6 +73,7 @@ class DocumentListResponse(BaseModel):
 
 class DocumentUploadResponse(BaseModel):
     """Response after document upload"""
+
     document_id: int
     filename: str
     status: DocumentStatus

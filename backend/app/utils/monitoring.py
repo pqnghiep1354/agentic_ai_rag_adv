@@ -1,16 +1,17 @@
 """
 Monitoring, metrics, and structured logging utilities
 """
+
 import json
 import logging
 import time
-from datetime import datetime
-from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
+from datetime import datetime
 from functools import wraps
 
-from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Request, Response
+from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Gauge, Histogram,
+                               generate_latest)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
@@ -75,7 +76,7 @@ def setup_logging():
     else:
         # Use simple format in debug
         console_handler.setFormatter(
-            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         )
 
     logger.addHandler(console_handler)
@@ -114,65 +115,56 @@ def log_with_context(logger: logging.Logger, level: str, message: str, **kwargs)
 if settings.ENABLE_METRICS:
     # Request metrics
     REQUEST_COUNT = Counter(
-        'http_requests_total',
-        'Total HTTP requests',
-        ['method', 'endpoint', 'status']
+        "http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"]
     )
 
     REQUEST_DURATION = Histogram(
-        'http_request_duration_seconds',
-        'HTTP request duration in seconds',
-        ['method', 'endpoint']
+        "http_request_duration_seconds",
+        "HTTP request duration in seconds",
+        ["method", "endpoint"],
     )
 
     # RAG metrics
-    RAG_QUERY_COUNT = Counter(
-        'rag_queries_total',
-        'Total RAG queries',
-        ['status']
-    )
+    RAG_QUERY_COUNT = Counter("rag_queries_total", "Total RAG queries", ["status"])
 
     RAG_QUERY_DURATION = Histogram(
-        'rag_query_duration_seconds',
-        'RAG query duration in seconds',
-        buckets=[0.1, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0]
+        "rag_query_duration_seconds",
+        "RAG query duration in seconds",
+        buckets=[0.1, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0],
     )
 
     RAG_RETRIEVAL_COUNT = Histogram(
-        'rag_retrieval_chunks',
-        'Number of chunks retrieved',
-        buckets=[1, 5, 10, 15, 20, 30, 50]
+        "rag_retrieval_chunks",
+        "Number of chunks retrieved",
+        buckets=[1, 5, 10, 15, 20, 30, 50],
     )
 
     RAG_TOKEN_COUNT = Histogram(
-        'rag_tokens_used',
-        'Number of tokens used in generation',
-        buckets=[100, 500, 1000, 2000, 4000, 8000]
+        "rag_tokens_used",
+        "Number of tokens used in generation",
+        buckets=[100, 500, 1000, 2000, 4000, 8000],
     )
 
     # Document metrics
     DOCUMENT_UPLOAD_COUNT = Counter(
-        'documents_uploaded_total',
-        'Total documents uploaded',
-        ['file_type', 'status']
+        "documents_uploaded_total", "Total documents uploaded", ["file_type", "status"]
     )
 
     DOCUMENT_PROCESSING_DURATION = Histogram(
-        'document_processing_duration_seconds',
-        'Document processing duration in seconds',
-        buckets=[1, 5, 10, 30, 60, 120, 300]
+        "document_processing_duration_seconds",
+        "Document processing duration in seconds",
+        buckets=[1, 5, 10, 30, 60, 120, 300],
     )
 
     DOCUMENT_CHUNK_COUNT = Histogram(
-        'document_chunks_created',
-        'Number of chunks created per document',
-        buckets=[10, 50, 100, 200, 500, 1000]
+        "document_chunks_created",
+        "Number of chunks created per document",
+        buckets=[10, 50, 100, 200, 500, 1000],
     )
 
     # System metrics
     ACTIVE_CONNECTIONS = Gauge(
-        'active_websocket_connections',
-        'Number of active WebSocket connections'
+        "active_websocket_connections", "Number of active WebSocket connections"
     )
 
 
@@ -212,12 +204,11 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         REQUEST_COUNT.labels(
             method=request.method,
             endpoint=request.url.path,
-            status=response.status_code
+            status=response.status_code,
         ).inc()
 
         REQUEST_DURATION.labels(
-            method=request.method,
-            endpoint=request.url.path
+            method=request.method, endpoint=request.url.path
         ).observe(duration)
 
         return response
@@ -236,10 +227,7 @@ async def metrics_endpoint(request: Request) -> Response:
     if not settings.ENABLE_METRICS:
         return Response(content="Metrics disabled", status_code=404)
 
-    return Response(
-        content=generate_latest(),
-        media_type=CONTENT_TYPE_LATEST
-    )
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 # Performance monitoring decorators
@@ -253,6 +241,7 @@ def monitor_performance(metric_name: str = "operation"):
     Returns:
         Decorated function
     """
+
     def decorator(func):
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
@@ -269,7 +258,7 @@ def monitor_performance(metric_name: str = "operation"):
                     f"{metric_name} completed",
                     function=func.__name__,
                     duration=duration,
-                    status="success"
+                    status="success",
                 )
 
                 return result
@@ -284,7 +273,7 @@ def monitor_performance(metric_name: str = "operation"):
                     function=func.__name__,
                     duration=duration,
                     status="error",
-                    error=str(e)
+                    error=str(e),
                 )
 
                 raise
@@ -304,7 +293,7 @@ def monitor_performance(metric_name: str = "operation"):
                     f"{metric_name} completed",
                     function=func.__name__,
                     duration=duration,
-                    status="success"
+                    status="success",
                 )
 
                 return result
@@ -319,13 +308,14 @@ def monitor_performance(metric_name: str = "operation"):
                     function=func.__name__,
                     duration=duration,
                     status="error",
-                    error=str(e)
+                    error=str(e),
                 )
 
                 raise
 
         # Return appropriate wrapper based on function type
         import asyncio
+
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
@@ -351,7 +341,7 @@ async def track_rag_query(query: str):
         "start_time": start_time,
         "chunks_retrieved": 0,
         "tokens_used": 0,
-        "status": "success"
+        "status": "success",
     }
 
     try:
@@ -375,7 +365,7 @@ async def track_rag_query(query: str):
             query_length=len(query),
             duration=duration,
             chunks_retrieved=metrics["chunks_retrieved"],
-            tokens_used=metrics["tokens_used"]
+            tokens_used=metrics["tokens_used"],
         )
 
     except Exception as e:
@@ -394,7 +384,7 @@ async def track_rag_query(query: str):
             "RAG query failed",
             query_length=len(query),
             duration=duration,
-            error=str(e)
+            error=str(e),
         )
 
         metrics["status"] = "error"
@@ -419,7 +409,7 @@ async def track_document_processing(document_id: int, filename: str):
         "filename": filename,
         "start_time": start_time,
         "chunks_created": 0,
-        "status": "success"
+        "status": "success",
     }
 
     try:
@@ -429,7 +419,7 @@ async def track_document_processing(document_id: int, filename: str):
         duration = time.time() - start_time
 
         if settings.ENABLE_METRICS:
-            file_ext = filename.split('.')[-1].lower()
+            file_ext = filename.split(".")[-1].lower()
             DOCUMENT_UPLOAD_COUNT.labels(file_type=file_ext, status="completed").inc()
             DOCUMENT_PROCESSING_DURATION.observe(duration)
             DOCUMENT_CHUNK_COUNT.observe(metrics["chunks_created"])
@@ -443,7 +433,7 @@ async def track_document_processing(document_id: int, filename: str):
             document_id=document_id,
             filename=filename,
             duration=duration,
-            chunks_created=metrics["chunks_created"]
+            chunks_created=metrics["chunks_created"],
         )
 
     except Exception as e:
@@ -451,7 +441,7 @@ async def track_document_processing(document_id: int, filename: str):
         duration = time.time() - start_time
 
         if settings.ENABLE_METRICS:
-            file_ext = filename.split('.')[-1].lower()
+            file_ext = filename.split(".")[-1].lower()
             DOCUMENT_UPLOAD_COUNT.labels(file_type=file_ext, status="failed").inc()
 
         # Log error
@@ -463,7 +453,7 @@ async def track_document_processing(document_id: int, filename: str):
             document_id=document_id,
             filename=filename,
             duration=duration,
-            error=str(e)
+            error=str(e),
         )
 
         metrics["status"] = "error"

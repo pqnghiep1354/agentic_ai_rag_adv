@@ -1,15 +1,16 @@
 """
 Redis caching utilities for performance optimization
 """
-import json
+
+import asyncio
 import hashlib
-from typing import Any, Optional, Callable
+import json
 from functools import wraps
+from typing import Any, Callable, Optional
+
 from redis.asyncio import Redis
 
-from app.core.config import settings
 from app.utils.monitoring import get_logger
-
 
 logger = get_logger(__name__)
 
@@ -144,12 +145,7 @@ class CacheService:
             return 0
 
     async def get_or_set(
-        self,
-        key: str,
-        func: Callable,
-        ttl: Optional[int] = None,
-        *args,
-        **kwargs
+        self, key: str, func: Callable, ttl: Optional[int] = None, *args, **kwargs
     ) -> Any:
         """
         Get from cache or compute and set
@@ -172,7 +168,11 @@ class CacheService:
 
         # Cache miss, compute value
         logger.debug(f"Cache miss for key: {key}")
-        value = await func(*args, **kwargs) if asyncio.iscoroutinefunction(func) else func(*args, **kwargs)
+        value = (
+            await func(*args, **kwargs)
+            if asyncio.iscoroutinefunction(func)
+            else func(*args, **kwargs)
+        )
 
         # Store in cache
         await self.set(key, value, ttl)
@@ -229,6 +229,7 @@ def cached(ttl: int = 3600, key_prefix: str = "cache"):
         async def get_user(user_id: int):
             return await db.get_user(user_id)
     """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, redis: Redis = None, **kwargs):
@@ -238,8 +239,10 @@ def cached(ttl: int = 3600, key_prefix: str = "cache"):
 
             # Generate cache key
             # Skip 'self' or 'cls' for methods
-            cache_args = args[1:] if args and hasattr(args[0], '__class__') else args
-            key = cache_key(*cache_args, prefix=f"{key_prefix}:{func.__name__}", **kwargs)
+            cache_args = args[1:] if args and hasattr(args[0], "__class__") else args
+            key = cache_key(
+                *cache_args, prefix=f"{key_prefix}:{func.__name__}", **kwargs
+            )
 
             # Try cache
             cache = CacheService(redis, default_ttl=ttl)
@@ -281,9 +284,7 @@ class QueryCache:
         return f"{self.prefix}:{query_hash}"
 
     async def get_query_result(
-        self,
-        query: str,
-        user_id: Optional[int] = None
+        self, query: str, user_id: Optional[int] = None
     ) -> Optional[dict]:
         """
         Get cached query result
@@ -299,11 +300,7 @@ class QueryCache:
         return await self.cache.get(key)
 
     async def set_query_result(
-        self,
-        query: str,
-        result: dict,
-        user_id: Optional[int] = None,
-        ttl: int = 3600
+        self, query: str, result: dict, user_id: Optional[int] = None, ttl: int = 3600
     ) -> bool:
         """
         Cache query result
@@ -348,11 +345,7 @@ class EmbeddingCache:
         text_hash = hashlib.md5(text.encode()).hexdigest()
         return f"{self.prefix}:{model}:{text_hash}"
 
-    async def get_embedding(
-        self,
-        text: str,
-        model: str = "default"
-    ) -> Optional[list]:
+    async def get_embedding(self, text: str, model: str = "default") -> Optional[list]:
         """
         Get cached embedding
 
@@ -367,11 +360,7 @@ class EmbeddingCache:
         return await self.cache.get(key)
 
     async def set_embedding(
-        self,
-        text: str,
-        embedding: list,
-        model: str = "default",
-        ttl: int = 86400
+        self, text: str, embedding: list, model: str = "default", ttl: int = 86400
     ) -> bool:
         """
         Cache embedding
@@ -387,6 +376,3 @@ class EmbeddingCache:
         """
         key = self._embedding_key(text, model)
         return await self.cache.set(key, embedding, ttl)
-
-
-import asyncio
