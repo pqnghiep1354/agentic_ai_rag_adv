@@ -9,26 +9,16 @@ import shutil
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    File,
-    HTTPException,
-    UploadFile,
-    status,
-)
+from fastapi import (APIRouter, BackgroundTasks, Depends, File, HTTPException,
+                     UploadFile, status)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user, get_db
 from app.models.domain.document import Document, DocumentStatus
 from app.models.domain.user import User
-from app.models.schemas.document import (
-    DocumentListResponse,
-    DocumentResponse,
-    DocumentUpdate,
-)
+from app.models.schemas.document import (DocumentListResponse,
+                                         DocumentResponse, DocumentUpdate)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

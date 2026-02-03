@@ -10,14 +10,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from qdrant_client.models import (
-    Distance,
-    FieldCondition,
-    Filter,
-    MatchValue,
-    PointStruct,
-    VectorParams,
-)
+from qdrant_client.models import (Distance, FieldCondition, Filter, MatchValue,
+                                  PointStruct, VectorParams)
 
 from app.core.config import settings
 from app.utils.chunking import Chunk

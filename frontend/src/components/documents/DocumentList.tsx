@@ -2,7 +2,7 @@
  * Document list component with status tracking
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   FileText,
   Trash2,
