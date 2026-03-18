@@ -11,7 +11,7 @@ from fastapi import WebSocket, WebSocketDisconnect, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.database import get_db
+from ...core.database import AsyncSessionLocal
 from ...core.security import decode_token
 from ...models.domain.conversation import Conversation, Message
 from ...models.domain.user import User
@@ -59,14 +59,14 @@ manager = ConnectionManager()
 
 async def get_current_user_ws(websocket: WebSocket, token: Optional[str] = None) -> Optional[User]:
     """
-    Get current user from WebSocket token
+    Get current user from WebSocket token by verifying JWT and fetching from DB.
 
     Args:
         websocket: WebSocket connection
         token: JWT token
 
     Returns:
-        User or None
+        User instance or None
     """
     if not token:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
@@ -80,8 +80,14 @@ async def get_current_user_ws(websocket: WebSocket, token: Optional[str] = None)
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return None
 
-        # Create a mock user object (in production, fetch from DB)
-        user = User(id=int(user_id), username="", email="")
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(User).where(User.id == int(user_id)))
+            user = result.scalar_one_or_none()
+
+        if user is None or not user.is_active:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return None
+
         return user
 
     except Exception as e:
@@ -119,43 +125,37 @@ async def handle_chat_websocket(websocket: WebSocket, token: str):
     # Connect user
     await manager.connect(user.id, websocket)
 
-    # Get database session
-    db_generator = get_db()
-    db = await anext(db_generator)
-
-    try:
-        while True:
-            # Receive message
-            data = await websocket.receive_text()
-            request = json.loads(data)
-
-            message_type = request.get("type")
-
-            if message_type == "chat":
-                await handle_chat_message(websocket, request, user, db)
-            elif message_type == "ping":
-                await websocket.send_json({"type": "pong"})
-            else:
-                await websocket.send_json(
-                    {
-                        "type": "error",
-                        "message": f"Unknown message type: {message_type}",
-                    }
-                )
-
-    except WebSocketDisconnect:
-        manager.disconnect(user.id)
-        logger.info(f"User {user.id} disconnected")
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        await websocket.send_json({"type": "error", "message": f"Server error: {str(e)}"})
-        manager.disconnect(user.id)
-    finally:
-        # Close database session
+    async with AsyncSessionLocal() as db:
         try:
-            await db.close()
-        except Exception:
-            pass
+            while True:
+                # Receive message
+                data = await websocket.receive_text()
+                request = json.loads(data)
+
+                message_type = request.get("type")
+
+                if message_type == "chat":
+                    await handle_chat_message(websocket, request, user, db)
+                elif message_type == "ping":
+                    await websocket.send_json({"type": "pong"})
+                else:
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "message": f"Unknown message type: {message_type}",
+                        }
+                    )
+
+        except WebSocketDisconnect:
+            manager.disconnect(user.id)
+            logger.info(f"User {user.id} disconnected")
+        except Exception as e:
+            logger.error(f"WebSocket error: {e}")
+            try:
+                await websocket.send_json({"type": "error", "message": f"Server error: {str(e)}"})
+            except Exception:
+                pass
+            manager.disconnect(user.id)
 
 
 async def handle_chat_message(websocket: WebSocket, request: dict, user: User, db: AsyncSession):

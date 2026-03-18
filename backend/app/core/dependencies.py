@@ -9,16 +9,18 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from neo4j import AsyncGraphDatabase
 from qdrant_client import AsyncQdrantClient
 from redis.asyncio import Redis
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import settings
+from .database import AsyncSessionLocal
 from .security import decode_token
 
 # Security
 security = HTTPBearer()
 
 
-# Database session (will be implemented with SQLAlchemy)
+# Database session
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Get async database session
@@ -26,8 +28,13 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     Yields:
         AsyncSession instance
     """
-    # TODO: Implement after creating database.py
-    raise NotImplementedError("Database session not yet implemented")
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
 
 
 # Redis connection
@@ -74,8 +81,8 @@ async def get_neo4j():
 # Current user dependency
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    # db: AsyncSession = Depends(get_db)  # Uncomment after implementing get_db
-) -> dict:
+    db: AsyncSession = Depends(get_db),
+):
     """
     Get current authenticated user from JWT token
 
@@ -84,11 +91,13 @@ async def get_current_user(
         db: Database session
 
     Returns:
-        User data dictionary
+        User model instance
 
     Raises:
         HTTPException: If authentication fails
     """
+    from app.models.domain.user import User
+
     token = credentials.credentials
     payload = decode_token(token)
 
@@ -100,32 +109,53 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # TODO: Fetch user from database
-    # user = await db.get(User, user_id)
-    # if user is None:
-    #     raise HTTPException(status_code=404, detail="User not found")
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user ID in token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # For now, return payload
-    return {"id": user_id, **payload}
+    result = await db.execute(select(User).where(User.id == uid))
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user",
+        )
+
+    return user
 
 
 # Optional current user (for endpoints that work with or without auth)
 async def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
-) -> Optional[dict]:
+    db: AsyncSession = Depends(get_db),
+) -> Optional[object]:
     """
     Get current user if authenticated, None otherwise
 
     Args:
         credentials: Optional HTTP Bearer token
+        db: Database session
 
     Returns:
-        User data or None
+        User model or None
     """
     if credentials is None:
         return None
 
     try:
-        return await get_current_user(credentials)
+        return await get_current_user(credentials, db)
     except HTTPException:
         return None

@@ -30,10 +30,38 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info("Initializing database connections...")
 
-    # TODO: Initialize database connection pool
-    # TODO: Create Qdrant collections if not exist
-    # TODO: Verify Neo4j connection
-    # TODO: Load embedding model
+    # Initialize database connection pool and create tables
+    try:
+        from app.core.database import engine
+        from app.models.domain import conversation, document, user  # noqa: F401 - ensure models are registered
+
+        from sqlalchemy import text
+
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
+        logger.info("Database connection verified")
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+
+    # Create Qdrant collections if not exist
+    try:
+        from app.repositories.vector_repo import get_vector_repository
+
+        vector_repo = get_vector_repository()
+        vector_repo.create_collection(recreate=False)
+        logger.info("Qdrant collection ready")
+    except Exception as e:
+        logger.warning(f"Qdrant initialization warning: {e}")
+
+    # Verify Neo4j connection
+    try:
+        from app.repositories.graph_repo import get_graph_repository
+
+        graph_repo = get_graph_repository()
+        graph_repo.get_graph_stats()
+        logger.info("Neo4j connection verified")
+    except Exception as e:
+        logger.warning(f"Neo4j connection warning: {e}")
 
     logger.info("Application started successfully")
 
@@ -41,7 +69,25 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down application...")
-    # TODO: Close database connections
+
+    # Close Neo4j connection
+    try:
+        from app.repositories.graph_repo import _graph_repo
+
+        if _graph_repo is not None:
+            _graph_repo.close()
+    except Exception as e:
+        logger.warning(f"Neo4j shutdown warning: {e}")
+
+    # Close database engine
+    try:
+        from app.core.database import engine
+
+        await engine.dispose()
+        logger.info("Database connections closed")
+    except Exception as e:
+        logger.warning(f"Database shutdown warning: {e}")
+
     logger.info("Application shutdown complete")
 
 

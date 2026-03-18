@@ -161,8 +161,7 @@ class DocumentProcessor:
             # Update document status to COMPLETED
             document.status = DocumentStatus.COMPLETED
             document.processed_at = datetime.utcnow()
-            document.processing_time = processing_time
-            document.error_message = None
+            document.processing_error = None
 
             await db.commit()
 
@@ -220,9 +219,8 @@ class DocumentProcessor:
             # Reset document metadata
             document.chunk_count = None
             document.entity_count = None
-            document.processing_time = None
             document.processed_at = None
-            document.error_message = None
+            document.processing_error = None
 
             await db.commit()
 

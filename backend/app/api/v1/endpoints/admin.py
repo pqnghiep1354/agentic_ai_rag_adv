@@ -18,7 +18,7 @@ from app.models.domain.user import User
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
     """
     Dependency to ensure user is an admin
 
@@ -26,21 +26,19 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
         current_user: Current authenticated user
 
     Returns:
-        User data if admin
+        User model if admin
 
     Raises:
         HTTPException: If user is not an admin
     """
-    # Check if user has admin role/is_superuser
-    # In real implementation, check user.is_superuser from database
-    if not current_user.get("is_superuser", False):
+    if not current_user.is_superuser:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
     return current_user
 
 
 @router.get("/dashboard")
 async def get_dashboard_stats(
-    db: AsyncSession = Depends(get_db), current_user: dict = Depends(require_admin)
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(require_admin)
 ) -> Dict[str, Any]:
     """
     Get comprehensive dashboard statistics
@@ -161,7 +159,7 @@ async def get_dashboard_stats(
 async def get_document_analytics(
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Get detailed document analytics
@@ -262,7 +260,7 @@ async def get_document_analytics(
 async def get_query_analytics(
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Get detailed query analytics and performance metrics
@@ -386,7 +384,7 @@ async def list_users(
     limit: int = Query(50, ge=1, le=100),
     search: Optional[str] = Query(None, description="Search by username or email"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     List all users with pagination and search
@@ -445,7 +443,7 @@ async def get_query_logs(
     user_id: Optional[int] = Query(None, description="Filter by user ID"),
     min_processing_time: Optional[float] = Query(None, description="Min processing time (seconds)"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Get query logs for monitoring and debugging

@@ -101,12 +101,16 @@ async def upload_document(
     # Save file to disk
     await save_upload_file(file, file_path)
 
+    # Determine file type from extension
+    file_type = file_ext.lstrip(".")
+
     # Create database record
     document = Document(
+        title=file.filename,
         filename=file.filename,
         file_path=file_path,
         file_size=os.path.getsize(file_path),
-        mime_type=file.content_type or "application/octet-stream",
+        file_type=file_type,
         status=DocumentStatus.PENDING,
         owner_id=current_user.id,
     )
@@ -269,8 +273,23 @@ async def delete_document(
     if os.path.exists(document.file_path):
         os.remove(document.file_path)
 
-    # TODO: Delete from Qdrant
-    # TODO: Delete from Neo4j
+    # Delete from Qdrant
+    try:
+        from app.repositories.vector_repo import get_vector_repository
+
+        vector_repo = get_vector_repository()
+        vector_repo.delete_by_document(document.id)
+    except Exception as e:
+        logger.warning(f"Failed to delete document {document_id} vectors from Qdrant: {e}")
+
+    # Delete from Neo4j
+    try:
+        from app.repositories.graph_repo import get_graph_repository
+
+        graph_repo = get_graph_repository()
+        graph_repo.delete_document_graph(document.id)
+    except Exception as e:
+        logger.warning(f"Failed to delete document {document_id} graph from Neo4j: {e}")
 
     # Delete from database
     await db.delete(document)
@@ -306,8 +325,7 @@ async def reprocess_document(
 
     # Reset status
     document.status = DocumentStatus.PENDING
-    document.error_message = None
-    document.processing_time = None
+    document.processing_error = None
 
     await db.commit()
     await db.refresh(document)
